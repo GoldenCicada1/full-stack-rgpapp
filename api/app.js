@@ -7,10 +7,24 @@ import testRoute from "./routes/test.route.js";
 import userRoute from "./routes/user.route.js";
 import chatRoute from "./routes/chat.route.js";
 import messageRoute from "./routes/message.route.js";
+import dotenv from "dotenv";
+
+
+// Load environment variables from .env file
+dotenv.config();
 
 const app = express();
 
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+// Enhanced CORS configuration
+app.use(cors({
+  origin: process.env.CLIENT_URL,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+
+
 app.use(express.json());
 app.use(cookieParser());
 
