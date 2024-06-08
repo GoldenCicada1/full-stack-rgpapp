@@ -32,7 +32,7 @@ nav {
       gap: 10px;
 
       img {
-        width: 28px;
+        width: 100px;
       }
 
       span {
@@ -84,7 +84,7 @@ nav {
 
       .profile{
         padding: 12px 24px;
-        background-color: #fece51;
+        background-color: 4169E1;
         cursor: pointer;
         border: none;
         position: relative;
@@ -107,7 +107,8 @@ nav {
     }
 
     .register {
-      background-color: #fece51;
+      background-color: #4169E1;
+      color: white;
     }
 
     .menuIcon {
@@ -129,7 +130,7 @@ nav {
       position: absolute;
       top: 0;
       right: -50%;
-      background-color: black;
+      background-color: blue;
       color: white;
       height: 100vh;
       width: 50%;
