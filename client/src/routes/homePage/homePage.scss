@@ -59,6 +59,29 @@
     }
   }
 
+  .welcomeMessage {
+    position: fixed; /* Fixed position to keep it on top of other content */
+    top: 50%; /* Place it at 50% from the top of the viewport */
+    left: 50%; /* Place it at 50% from the left of the viewport */
+    transform: translateX(-50%); /* Center horizontally */
+    background-color: rgba(240, 240, 240, 0.9); /* Semi-transparent background */
+    padding: 10px 20px; /* Padding */
+    border-radius: 5px; /* Rounded corners */
+    text-align: center; /* Center align text */
+    font-size: 18px; /* Font size */
+    color: #333; /* Text color */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Box shadow for depth */
+    animation: fadeInOut 5s linear forwards; /* Animation for fade in and out */
+  }
+  
+  /* Keyframes for fade in and out animation */
+  @keyframes fadeInOut {
+    0% { opacity: 0; } /* Start with opacity 0 */
+    20% { opacity: 1; } /* Fade in */
+    80% { opacity: 1; } /* Stay visible */
+    100% { opacity: 0; } /* Fade out */
+  }
+
   .imgContainer {
     flex: 2;
     background-color: #fcf5f3;
