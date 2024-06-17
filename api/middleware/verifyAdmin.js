@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 
 export const verifyAdmin = async (req, res, next) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.userId } });
+    const user = req.user; // Use the user object attached by verifyToken
 
     if (!user || !user.isAdmin) {
       return res.status(403).json({ message: "Not Authorized! Only admins can add posts." });
@@ -12,7 +12,7 @@ export const verifyAdmin = async (req, res, next) => {
 
     next();
   } catch (err) {
-    console.error(err);
+    console.error("Error in verifyAdmin middleware:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
