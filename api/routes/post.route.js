@@ -8,8 +8,8 @@ const router = express.Router();
 router.get("/", getPosts);
 router.get("/:id", getPost);
 router.post("/", verifyToken, verifyAdmin, addPost); // Apply verifyAdmin middleware
-router.put("/:id", verifyToken, updatePost);
-router.delete("/:id", verifyToken, deletePost);
+router.put("/:id", verifyToken, verifyAdmin, updatePost);
+router.delete("/:id", verifyToken, verifyAdmin, deletePost);
 
 
 export default router;
