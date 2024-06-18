@@ -24,6 +24,8 @@ export const getPosts = async (req, res) => {
         postDetail: true, // Include related post detail if needed
       },
     });
+    
+
 
     res.status(200).json(posts);
   } catch (err) {

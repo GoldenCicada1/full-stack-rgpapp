@@ -3,15 +3,26 @@ import "./pin.scss";
 import { Link } from "react-router-dom";
 
 function Pin({ item }) {
+  const { latitude, longitude, images, id, title, bedroom, price } = item;
+
+  if (!latitude || !longitude) {
+    console.error(`Item with ID ${id} is missing latitude or longitude`);
+    return null;
+  }
+
   return (
-    <Marker position={[item.latitude, item.longitude]}>
+    <Marker position={[latitude, longitude]}>
       <Popup>
         <div className="popupContainer">
-          <img src={item.images[0]} alt="" />
+          {images && images.length > 0 ? (
+            <img src={images[0]} alt="" />
+          ) : (
+            <div className="noImage">No Image Available</div>
+          )}
           <div className="textContainer">
-            <Link to={`/${item.id}`}>{item.title}</Link>
-            <span>{item.bedroom} bedroom</span>
-            <b>$ {item.price}</b>
+            <Link to={`/${id}`}>{title}</Link>
+            <span>{bedroom} bedroom</span>
+            <b>$ {price}</b>
           </div>
         </div>
       </Popup>
