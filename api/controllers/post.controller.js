@@ -2,30 +2,36 @@ import prisma from "../lib/prisma.js";
 import jwt from "jsonwebtoken";
 
 export const getPosts = async (req, res) => {
-  const query = req.query;
+  const { city, type, property, bedroom, minPrice, maxPrice } = req.query;
 
   try {
     const posts = await prisma.post.findMany({
       where: {
-        city: query.city || undefined,
-        type: query.type || undefined,
-        property: query.property || undefined,
-        bedroom: parseInt(query.bedroom) || undefined,
-        price: {
-          gte: parseInt(query.minPrice) || undefined,
-          lte: parseInt(query.maxPrice) || undefined,
+        location: {
+          city: city || undefined,
         },
+        type: type || undefined,
+        property: property || undefined,
+        bedroom: bedroom ? parseInt(bedroom) : undefined,
+        price: {
+          gte: minPrice ? parseInt(minPrice) : undefined,
+          lte: maxPrice ? parseInt(maxPrice) : undefined,
+        },
+      },
+      include: {
+        location: true, // Include related location data if needed
+        user: true, // Include related user data if needed
+        postDetail: true, // Include related post detail if needed
       },
     });
 
-    // setTimeout(() => {
     res.status(200).json(posts);
-    // }, 3000);
   } catch (err) {
-    console.log(err);
+    console.error("Error fetching posts: ", err);
     res.status(500).json({ message: "Failed to get posts" });
   }
 };
+
 
 export const getPost = async (req, res) => {
   const id = req.params.id;
@@ -34,6 +40,7 @@ export const getPost = async (req, res) => {
       where: { id },
       include: {
         postDetail: true,
+        location: true,
         user: {
           select: {
             username: true,
@@ -75,15 +82,94 @@ export const addPost = async (req, res) => {
   const tokenUserId = req.userId;
 
   try {
+    // Validate required fields
+    const {
+      title,
+      price,
+      images,
+      bedroom,
+      bathroom,
+      type,
+      property,
+      locationId,
+      locationData,
+      postDetail
+    } = body.postData;
+
+    if (
+      !title ||
+      !price ||
+      !images ||
+      !bedroom ||
+      !bathroom ||
+      !type ||
+      !property
+    ) {
+      return res.status(400).json({ message: "All required fields must be provided" });
+    }
+
+    // Initialize locationId variable
+    let finalLocationId;
+
+    // Check if locationId is provided
+    if (locationId) {
+      finalLocationId = locationId; // Use provided locationId directly
+    } else if (locationData) {
+      // Validate location fields
+      if (!locationData.name || !locationData.address || !locationData.city || !locationData.country) {
+        return res.status(400).json({ message: "Location data must include name, address, city, and country" });
+      }
+
+      // Check if the location already exists based on name, address, and city
+      let location = await prisma.location.findFirst({
+        where: {
+          name: locationData.name,
+          address: locationData.address,
+          city: locationData.city,
+        }
+      });
+
+      if (!location) {
+        // If location doesn't exist, create a new one
+        location = await prisma.location.create({
+          data: {
+            name: locationData.name,
+            address: locationData.address,
+            city: locationData.city,
+            stateRegion: locationData.stateRegion || null,
+            zipCode: locationData.zipCode || null,
+            country: locationData.country,
+            neighborhood: locationData.neighborhood || null,
+            schoolDistrict: locationData.schoolDistrict || null,
+            crimeRate: locationData.crimeRate || null,
+            latitude: locationData.latitude || null,
+            longitude: locationData.longitude || null,
+          }
+        });
+      }
+
+      // Set finalLocationId to the found or created location's id
+      finalLocationId = location.id;
+    }
+
+    // Create the post with finalLocationId
     const newPost = await prisma.post.create({
       data: {
-        ...body.postData,
+        title,
+        price,
+        images,
+        bedroom,
+        bathroom,
+        type,
+        property,
         userId: tokenUserId,
-        postDetail: {
-          create: body.postDetail,
-        },
+        locationId: finalLocationId,
+        postDetail: postDetail ? {
+          create: postDetail,
+        } : undefined,
       },
     });
+
     res.status(200).json(newPost);
   } catch (err) {
     console.log(err);
@@ -107,12 +193,25 @@ export const deletePost = async (req, res) => {
   try {
     const post = await prisma.post.findUnique({
       where: { id },
+      include: { postDetail: true }, // Include the related PostDetail
     });
+
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
 
     if (post.userId !== tokenUserId) {
       return res.status(403).json({ message: "Not Authorized!" });
     }
 
+    // Delete the related PostDetail first, if it exists
+    if (post.postDetail) {
+      await prisma.postDetail.delete({
+        where: { postId: id },
+      });
+    }
+
+    // Now delete the Post
     await prisma.post.delete({
       where: { id },
     });

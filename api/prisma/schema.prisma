@@ -18,17 +18,15 @@ model Post {
   title      String
   price      Int
   images     String[]
-  address    String
-  city       String
   bedroom    Int
   bathroom   Int
-  latitude   String
-  longitude  String
   type       Type
   property   Property
   createdAt  DateTime    @default(now())
   user       User        @relation(fields: [userId], references: [id])
   userId     String      @db.ObjectId
+  location   Location   @relation(fields: [locationId], references: [id])
+  locationId String     @db.ObjectId  // Ensure locationId is also ObjectId
   postDetail PostDetail?
   savedPosts SavedPost[]
 }
@@ -102,4 +100,22 @@ model Message {
   chat      Chat     @relation(fields: [chatId], references: [id])
   chatId    String   @db.ObjectId
   createdAt DateTime @default(now())
+}
+
+model Location {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  name          String   @unique
+  address       String
+  city          String
+  stateRegion   String
+  zipCode       String?
+  country       String
+  neighborhood  String?
+  schoolDistrict String?
+  crimeRate     Float?
+  latitude      String
+  longitude     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  posts         Post[]
 }
