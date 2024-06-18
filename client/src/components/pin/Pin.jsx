@@ -22,7 +22,7 @@ function Pin({ item }) {
           <div className="textContainer">
             <Link to={`/${id}`}>{title}</Link>
             <span>{bedroom} bedroom</span>
-            <b>$ {price}</b>
+            <b>{price} TZS</b>
           </div>
         </div>
       </Popup>
