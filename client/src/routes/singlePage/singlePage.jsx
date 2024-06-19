@@ -115,7 +115,7 @@ function SinglePage() {
                   {post.postDetail.school > 999
                     ? post.postDetail.school / 1000 + "km"
                     : post.postDetail.school + "m"}{" "}
-                  away
+                  Away
                 </p>
               </div>
             </div>
@@ -123,20 +123,80 @@ function SinglePage() {
               <img src="/pet.png" alt="" />
               <div className="featureText">
                 <span>Bus Stop</span>
-                <p>{post.postDetail.bus}m away</p>
+                <p>{post.postDetail.bus}m Away</p>
               </div>
             </div>
             <div className="feature">
               <img src="/fee.png" alt="" />
               <div className="featureText">
                 <span>Restaurant</span>
-                <p>{post.postDetail.restaurant}m away</p>
+                <p>{post.postDetail.restaurant}m Away</p>
               </div>
             </div>
           </div>
           <p className="title">Location</p>
           <div className="mapContainer">
             <Map items={[post.location]} />
+          </div>
+          <div className="listHorizontal">
+            <div className="feature">
+              <div className="featureText">
+                <span>Location Name</span>
+                <p>{post.location.name}</p>
+              </div>
+            </div>
+            <div className="feature">
+              <div className="featureText">
+                <span>State or Region</span>
+                <p>{post.location.stateRegion}</p>
+              </div>
+            </div>
+            <div className="feature">
+              <div className="featureText">
+                <span>City</span>
+                <p>{post.location.city}</p>
+              </div>
+            </div>
+          </div>
+          <div className="listHorizontal">
+            <div className="feature">
+              <div className="featureText">
+                <span>ZipCode</span>
+                <p>{post.location.zipCode}</p>
+              </div>
+            </div>
+            <div className="feature">
+              <div className="featureText">
+                <span>Country</span>
+                <p>{post.location.country}</p>
+              </div>
+            </div>
+            <div className="feature">
+              <div className="featureText">
+                <span>Neighborhood</span>
+                <p>{post.location.neighborhood}</p>
+              </div>
+            </div>
+          </div>
+          <div className="listHorizontal">
+            <div className="feature">
+              <div className="featureText">
+                <span>School District</span>
+                <p>{post.location.schoolDistrict}</p>
+              </div>
+            </div>
+            <div className="feature">
+              <div className="featureText">
+                <span>Crime Rate </span>
+                <p>{post.location.crimeRate}</p>
+              </div>
+            </div>
+            <div className="feature">
+              <div className="featureText">
+                <span>Neighborhood</span>
+                <p>{post.location.neighborhood}</p>
+              </div>
+            </div>
           </div>
           <div className="buttons">
             <button>
