@@ -17,7 +17,7 @@ function SinglePage() {
     if (!currentUser) {
       navigate("/login");
     }
-    // AFTER REACT 19 UPDATE TO USEOPTIMISTIK HOOK
+    // AFTER REACT 19 UPDATE TO USE OPTIMISTIK HOOK
     setSaved((prev) => !prev);
     try {
       await apiRequest.post("/users/save", { postId: post.id });
@@ -50,7 +50,7 @@ function SinglePage() {
             <div
               className="bottom"
               dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(post.postDetail.desc),
+                __html: DOMPurify.sanitize(post.postDetail?.desc || "No description provided"),
               }}
             ></div>
           </div>

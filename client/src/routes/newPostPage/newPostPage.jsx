@@ -11,6 +11,9 @@ function NewPostPage() {
   const [images, setImages] = useState([]);
   const [error, setError] = useState("");
 
+  const userId = localStorage.getItem("userId"); // Assuming userId is stored in localStorage
+
+
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -18,21 +21,38 @@ function NewPostPage() {
     const formData = new FormData(e.target);
     const inputs = Object.fromEntries(formData);
 
+    console.log(inputs);
+
     try {
       const res = await apiRequest.post("/posts", {
         postData: {
           title: inputs.title,
           price: parseInt(inputs.price),
-          address: inputs.address,
-          city: inputs.city,
+          // address: inputs.address,
+          // city: inputs.city,
           bedroom: parseInt(inputs.bedroom),
           bathroom: parseInt(inputs.bathroom),
           type: inputs.type,
           property: inputs.property,
-          latitude: inputs.latitude,
-          longitude: inputs.longitude,
+          // latitude: inputs.latitude,
+          // longitude: inputs.longitude,
           images: images,
+          userId: userId,
+          locationId: inputs.locationId, // Include locationId if provided
+          locationData: {
+            name: inputs.name,
+            address: inputs.address,
+            city: inputs.city,
+            country: inputs.country,
+            stateRegion: inputs.stateRegion,
+            zipCode: inputs.zipCode,
+            neighborhood: inputs.neighborhood,
+            schoolDistrict: inputs.schoolDistrict,
+            crimeRate: parseFloat(inputs.crimeRate), // Ensure it's a float
+            latitude: inputs.latitude,
+            longitude: inputs.longitude,
         },
+      },
         postDetail: {
           desc: value,
           utilities: inputs.utilities,
@@ -65,18 +85,11 @@ function NewPostPage() {
               <label htmlFor="price">Price</label>
               <input id="price" name="price" type="number" />
             </div>
-            <div className="item">
-              <label htmlFor="address">Address</label>
-              <input id="address" name="address" type="text" />
-            </div>
             <div className="item description">
               <label htmlFor="desc">Description</label>
               <ReactQuill theme="snow" onChange={setValue} value={value} />
             </div>
-            <div className="item">
-              <label htmlFor="city">City</label>
-              <input id="city" name="city" type="text" />
-            </div>
+
             <div className="item">
               <label htmlFor="bedroom">Bedroom Number</label>
               <input min={1} id="bedroom" name="bedroom" type="number" />
@@ -84,6 +97,52 @@ function NewPostPage() {
             <div className="item">
               <label htmlFor="bathroom">Bathroom Number</label>
               <input min={1} id="bathroom" name="bathroom" type="number" />
+            </div>
+
+            {/* location Details  Start*/}
+            <div className="item">
+              <label htmlFor="locationId">Location ID</label>
+              <input id="locationId" name="locationId" type="text" />
+            </div>
+            <div className="item">
+              <label htmlFor="name">Location Name</label>
+              <input id="name" name="name" type="text" />
+            </div>
+           
+            <div className="item">
+              <label htmlFor="address">Address</label>
+              <input id="address" name="address" type="text" />
+            </div>
+            <div className="item">
+              <label htmlFor="type">Country</label>
+              <select name="country">
+                <option value="Tanzania">Tanzania</option>
+                <option value="Kenya">Kenya</option>
+              </select>
+            </div>
+            <div className="item">
+              <label htmlFor="stateRegion">State/Region</label>
+              <input id="stateRegion" name="stateRegion" type="text" />
+            </div>
+            <div className="item">
+              <label htmlFor="city">City</label>
+              <input id="city" name="city" type="text" />
+            </div>
+            <div className="item">
+              <label htmlFor="zipCode">Zip Code</label>
+              <input id="zipCode" name="zipCode" type="number" />
+            </div>
+            <div className="item">
+              <label htmlFor="neighborhood">Neighborhood</label>
+              <input id="neighborhood" name="neighborhood" type="text" />
+            </div>
+            <div className="item">
+              <label htmlFor="schoolDistrict">School District</label>
+              <input id="schoolDistrict" name="schoolDistrict" type="text" />
+            </div>
+            <div className="item">
+              <label htmlFor="crimeRate">Crime Rate</label>
+              <input id="crimeRate" name="crimeRate" type="text" />
             </div>
             <div className="item">
               <label htmlFor="latitude">Latitude</label>
@@ -93,6 +152,10 @@ function NewPostPage() {
               <label htmlFor="longitude">Longitude</label>
               <input id="longitude" name="longitude" type="text" />
             </div>
+
+            {/* Location Details End */}
+
+
             <div className="item">
               <label htmlFor="type">Type</label>
               <select name="type">

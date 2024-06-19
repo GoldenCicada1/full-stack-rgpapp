@@ -26,6 +26,7 @@ export const verifyToken = (req, res, next) => {
 
       req.user = user; // Attach the user object to the request
       req.userId = user.id; // Also attach userId to the request
+      console.log(`User ID from verifyToken: ${req.userId}`);
       next();
     } catch (error) {
       console.error(error);

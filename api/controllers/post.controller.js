@@ -52,6 +52,8 @@ export const getPost = async (req, res) => {
       },
     });
 
+     // Log the post object to check its structure
+
     const token = req.cookies?.token;
 
     if (token) {
@@ -82,6 +84,7 @@ export const getPost = async (req, res) => {
 export const addPost = async (req, res) => {
   const body = req.body;
   const tokenUserId = req.userId;
+
 
   try {
     // Validate required fields
@@ -117,7 +120,6 @@ export const addPost = async (req, res) => {
     if (locationId) {
       finalLocationId = locationId; // Use provided locationId directly
     } else if (locationData) {
-      // Validate location fields
       if (!locationData.name || !locationData.address || !locationData.city || !locationData.country) {
         return res.status(400).json({ message: "Location data must include name, address, city, and country" });
       }
@@ -152,6 +154,8 @@ export const addPost = async (req, res) => {
 
       // Set finalLocationId to the found or created location's id
       finalLocationId = location.id;
+     } else {
+      return res.status(400).json({ message: "Either locationId or locationData must be provided" });
     }
 
     // Create the post with finalLocationId
@@ -164,11 +168,15 @@ export const addPost = async (req, res) => {
         bathroom,
         type,
         property,
-        userId: tokenUserId,
-        locationId: finalLocationId,
-        postDetail: postDetail ? {
-          create: postDetail,
-        } : undefined,
+        user: {
+      connect: { id: req.userId }, // Connect to existing user
+    },
+        location: {
+          connect: { id: finalLocationId }
+        },
+        postDetail: {
+          create: body.postDetail,
+        },
       },
     });
 
