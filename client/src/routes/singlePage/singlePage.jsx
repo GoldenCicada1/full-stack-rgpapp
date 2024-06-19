@@ -50,7 +50,9 @@ function SinglePage() {
             <div
               className="bottom"
               dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(post.postDetail?.desc || "No description provided"),
+                __html: DOMPurify.sanitize(
+                  post.postDetail?.desc || "No description provided"
+                ),
               }}
             ></div>
           </div>

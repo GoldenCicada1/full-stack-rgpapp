@@ -25,12 +25,13 @@ model Post {
   createdAt  DateTime    @default(now())
   user       User        @relation(fields: [userId], references: [id])
   userId     String      @db.ObjectId
-  location   Location   @relation(fields: [locationId], references: [id])
-  locationId String     @db.ObjectId  // Ensure locationId is also ObjectId
+  // location   Location   @relation(fields: [locationId], references: [id])
+  // locationId String     @db.ObjectId  // Ensure locationId is also ObjectId
+  land       Land        @relation(fields: [landId], references: [id])
+  landId     String      @db.ObjectId // Add this relation field
   postDetail PostDetail?
   savedPosts SavedPost[]
 }
-
 
 enum Type {
   buy
@@ -84,12 +85,12 @@ model User {
 }
 
 model Chat {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
-  users     User[]    @relation(fields: [userIDs], references: [id])
-  userIDs   String[]  @db.ObjectId
-  createdAt DateTime  @default(now())
-  seenBy    String[]  @db.ObjectId
-  messages  Message[]
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  users       User[]    @relation(fields: [userIDs], references: [id])
+  userIDs     String[]  @db.ObjectId
+  createdAt   DateTime  @default(now())
+  seenBy      String[]  @db.ObjectId
+  messages    Message[]
   lastMessage String?
 }
 
@@ -103,19 +104,39 @@ model Message {
 }
 
 model Location {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  name          String   @unique
-  address       String
-  city          String
-  stateRegion   String
-  zipCode       String?
-  country       String
-  neighborhood  String?
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  name           String   @unique
+  address        String
+  city           String
+  stateRegion    String
+  zipCode        String?
+  country        String
+  neighborhood   String?
   schoolDistrict String?
-  crimeRate     Float?
-  latitude      String
-  longitude     String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  posts         Post[]
+  crimeRate      Float?
+  latitude       String
+  longitude      String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  lands          Land[]
+}
+
+model Land {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  size             Int
+  description      String
+  price            Int
+  features         String[]  @default([])
+  zoning           String?
+  soilStructure    String?
+  topography       String?
+  registered       Boolean   @default(false)
+  registrationDate DateTime?
+  accessibility    String?
+  location         Location  @relation(fields: [locationId], references: [id])
+  locationId       String    @unique @db.ObjectId
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  posts            Post[] // Add this relation to connect with the Post model
 }

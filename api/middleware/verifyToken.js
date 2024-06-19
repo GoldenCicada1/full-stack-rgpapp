@@ -13,16 +13,15 @@ export const verifyToken = (req, res, next) => {
       console.error("JWT Verification Error:", err);
       return res.status(403).json({ message: "Token is not Valid!" });
     }
-    
+
     try {
       const user = await prisma.user.findUnique({
         where: { id: payload.id },
       });
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found!" });
       }
-
 
       req.user = user; // Attach the user object to the request
       req.userId = user.id; // Also attach userId to the request

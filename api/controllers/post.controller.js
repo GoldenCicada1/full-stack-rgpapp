@@ -24,8 +24,6 @@ export const getPosts = async (req, res) => {
         postDetail: true, // Include related post detail if needed
       },
     });
-    
-
 
     res.status(200).json(posts);
   } catch (err) {
@@ -33,7 +31,6 @@ export const getPosts = async (req, res) => {
     res.status(500).json({ message: "Failed to get posts" });
   }
 };
-
 
 export const getPost = async (req, res) => {
   const id = req.params.id;
@@ -52,7 +49,7 @@ export const getPost = async (req, res) => {
       },
     });
 
-     // Log the post object to check its structure
+    // Log the post object to check its structure
 
     const token = req.cookies?.token;
 
@@ -67,7 +64,9 @@ export const getPost = async (req, res) => {
               },
             },
           });
-          return res.status(200).json({ ...post, isSaved: saved ? true : false });
+          return res
+            .status(200)
+            .json({ ...post, isSaved: saved ? true : false });
         } else {
           return res.status(200).json({ ...post, isSaved: false });
         }
@@ -85,7 +84,6 @@ export const addPost = async (req, res) => {
   const body = req.body;
   const tokenUserId = req.userId;
 
-
   try {
     // Validate required fields
     const {
@@ -98,7 +96,7 @@ export const addPost = async (req, res) => {
       property,
       locationId,
       locationData,
-      postDetail
+      postDetail,
     } = body.postData;
 
     if (
@@ -110,7 +108,9 @@ export const addPost = async (req, res) => {
       !type ||
       !property
     ) {
-      return res.status(400).json({ message: "All required fields must be provided" });
+      return res
+        .status(400)
+        .json({ message: "All required fields must be provided" });
     }
 
     // Initialize locationId variable
@@ -120,8 +120,18 @@ export const addPost = async (req, res) => {
     if (locationId) {
       finalLocationId = locationId; // Use provided locationId directly
     } else if (locationData) {
-      if (!locationData.name || !locationData.address || !locationData.city || !locationData.country) {
-        return res.status(400).json({ message: "Location data must include name, address, city, and country" });
+      if (
+        !locationData.name ||
+        !locationData.address ||
+        !locationData.city ||
+        !locationData.country
+      ) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "Location data must include name, address, city, and country",
+          });
       }
 
       // Check if the location already exists based on name, address, and city
@@ -130,7 +140,7 @@ export const addPost = async (req, res) => {
           name: locationData.name,
           address: locationData.address,
           city: locationData.city,
-        }
+        },
       });
 
       if (!location) {
@@ -148,14 +158,18 @@ export const addPost = async (req, res) => {
             crimeRate: locationData.crimeRate || null,
             latitude: locationData.latitude || null,
             longitude: locationData.longitude || null,
-          }
+          },
         });
       }
 
       // Set finalLocationId to the found or created location's id
       finalLocationId = location.id;
-     } else {
-      return res.status(400).json({ message: "Either locationId or locationData must be provided" });
+    } else {
+      return res
+        .status(400)
+        .json({
+          message: "Either locationId or locationData must be provided",
+        });
     }
 
     // Create the post with finalLocationId
@@ -169,10 +183,10 @@ export const addPost = async (req, res) => {
         type,
         property,
         user: {
-      connect: { id: req.userId }, // Connect to existing user
-    },
+          connect: { id: req.userId }, // Connect to existing user
+        },
         location: {
-          connect: { id: finalLocationId }
+          connect: { id: finalLocationId },
         },
         postDetail: {
           create: body.postDetail,
