@@ -25,7 +25,7 @@ export const getLandById = async (req, res) => {
         id,
       },
       include: {
-        location: true, // Include associated location details
+        location: true, // Use lowercase 'location' as defined in your Prisma schema
       },
     });
 
@@ -49,6 +49,8 @@ export const addLand = async (req, res) => {
     soilStructure,
     topography,
     postalZipCode,
+    registered,
+    registrationDate,
     accessibility,
     locationData,
   } = req.body;
@@ -56,19 +58,17 @@ export const addLand = async (req, res) => {
   // Validate required fields for land
   if (!name || !size || !description || !locationData) {
     return res.status(400).json({
-      message:
-        "Name, size, description, and locationData are required fields",
+      message: "name, size, description, and locationData are required fields",
     });
   }
 
   try {
     let finalLocationId;
 
-    // Check if locationId is provided directly
+    // Process location data first
     if (locationData.locationId) {
       finalLocationId = locationData.locationId;
     } else {
-      // Validate and create or find location if not provided directly
       const {
         country,
         stateRegion,
@@ -83,14 +83,16 @@ export const addLand = async (req, res) => {
       if (!country || !latitude || !longitude) {
         return res.status(400).json({
           message:
-            "Location data must include  country, latitude, and longitude",
+            "Location data must include country, latitude, and longitude",
         });
       }
 
-      // Check if the location already exists based on and country
+      // Check if the location already exists based on specified fields
       let location = await prisma.location.findFirst({
         where: {
           country,
+          latitude,
+          longitude,
         },
       });
 
@@ -124,10 +126,10 @@ export const addLand = async (req, res) => {
         soilStructure: soilStructure || null,
         topography: topography || null,
         postalZipCode: postalZipCode || null,
+        registered: registered || false,
+        registrationDate: registrationDate ? new Date(registrationDate) : null,
         accessibility: accessibility || null,
-        location: {
-          connect: { id: finalLocationId },
-        },
+        locationId: finalLocationId, // Properly connect location by id
       },
       include: {
         location: true, // Include location details in the response
@@ -141,7 +143,7 @@ export const addLand = async (req, res) => {
   }
 };
 export const updateLand = async (req, res) => {
-  const { id } = req.params;
+  const landId = req.params.id; // Assuming the landId is passed as a route parameter
   const {
     name,
     size,
@@ -151,6 +153,8 @@ export const updateLand = async (req, res) => {
     soilStructure,
     topography,
     postalZipCode,
+    registered,
+    registrationDate,
     accessibility,
     locationData,
   } = req.body;
@@ -158,66 +162,69 @@ export const updateLand = async (req, res) => {
   // Validate required fields for land
   if (!name || !size || !description || !locationData) {
     return res.status(400).json({
-      message:
-        "Name, size, description, and locationData are required fields",
+      message: "name, size, description, and locationData are required fields",
     });
   }
 
+  let finalLocationId;
+
   try {
-    let finalLocationId;
-
-    // Check if locationId is provided directly
-    if (locationData.locationId) {
-      finalLocationId = locationData.locationId;
-    } else {
-      // Validate and create or find location if not provided directly
-      const {
-        country,
-        stateRegion,
-        districtCounty,
-        ward,
-        streetVillage,
-        latitude,
-        longitude,
-      } = locationData;
-
-      if (!country || !latitude || !longitude) {
-        return res.status(400).json({
-          message:
-            "Location data must include name,  country, latitude, and longitude",
-        });
-      }
-
-      // Check if the location already exists based on name, and country
-      let location = await prisma.location.findFirst({
-        where: {
+    // Update or create location if locationData is provided
+    if (locationData) {
+      if (locationData.locationId) {
+        finalLocationId = locationData.locationId;
+      } else {
+        const {
           country,
-        },
-      });
+          stateRegion,
+          districtCounty,
+          ward,
+          streetVillage,
+          latitude,
+          longitude,
+        } = locationData;
 
-      if (!location) {
-        // If location doesn't exist, create a new one
-        location = await prisma.location.create({
-          data: {
+        // Validate required fields for location
+        if (!country || !latitude || !longitude) {
+          return res.status(400).json({
+            message:
+              "Location data must include country, latitude, and longitude",
+          });
+        }
+
+        // Check if the location already exists based on specified fields
+        let location = await prisma.location.findFirst({
+          where: {
             country,
-            stateRegion: stateRegion || null,
-            districtCounty: districtCounty || null,
-            ward: ward || null,
-            streetVillage: streetVillage || null,
             latitude,
             longitude,
           },
         });
-      }
 
-      // Set finalLocationId to the found or created location's id
-      finalLocationId = location.id;
+        if (!location) {
+          // If location doesn't exist, create a new one
+          location = await prisma.location.create({
+            data: {
+              country,
+              stateRegion: stateRegion || null,
+              districtCounty: districtCounty || null,
+              ward: ward || null,
+              streetVillage: streetVillage || null,
+              latitude,
+              longitude,
+            },
+          });
+        }
+
+        // Set finalLocationId to the found or created location's id
+        finalLocationId = location.id;
+      }
     }
 
     // Update the land using finalLocationId
     const updatedLand = await prisma.land.update({
       where: {
-        id,
+        id: landId,
       },
       data: {
         name,
@@ -228,10 +235,10 @@ export const updateLand = async (req, res) => {
         soilStructure: soilStructure || null,
         topography: topography || null,
         postalZipCode: postalZipCode || null,
+        registered,
+        registrationDate: registrationDate ? new Date(registrationDate) : null,
         accessibility: accessibility || null,
-        location: {
-          connect: { id: finalLocationId },
-        },
+        locationId: finalLocationId, // Update the locationId in Land
       },
       include: {
         location: true, // Include location details in the response
@@ -244,29 +251,91 @@ export const updateLand = async (req, res) => {
     res.status(500).json({ message: "Failed to update land" });
   }
 };
+
 export const deleteLand = async (req, res) => {
-  const landId = req.params.id;
+  const landId = req.params.id; // Assuming the landId is passed as a route parameter
 
   try {
-    // Begin a Prisma transaction
-    await prisma.$transaction(async (prisma) => {
-      // Delete the land and its associated location
-      await prisma.land.delete({
-        where: {
-          id: landId,
-        },
-        include: {
-          location: true, // Include location details in the deletion
-        },
-      });
+    // Find the land by id to get the associated locationId
+    const land = await prisma.land.findUnique({
+      where: { id: landId },
+      select: { locationId: true },
     });
 
-    res
-      .status(200)
-      .json({ message: "Land and its location deleted successfully" });
+    if (!land) {
+      return res.status(404).json({ message: "Land not found" });
+    }
+
+    const locationId = land.locationId;
+
+    // Delete the land entry
+    await prisma.land.delete({
+      where: { id: landId },
+    });
+
+    // Delete the location entry associated with the land
+    await prisma.location.delete({
+      where: { id: locationId },
+    });
+
+    res.status(200).json({ message: "Land and associated location deleted successfully" });
   } catch (error) {
-    console.error("Error deleting land:", error);
-    res.status(500).json({ message: "Failed to delete land and its location" });
+    console.error("Error deleting land and location:", error);
+    res.status(500).json({ message: "Failed to delete land and location" });
   }
 };
+
+export const deleteMultipleLands = async (req, res) => {
+  const { landIds } = req.body; // Assuming the landIds are passed in the request body
+
+  if (!landIds || !Array.isArray(landIds) || landIds.length === 0) {
+    return res.status(400).json({ message: "landIds is required and should be a non-empty array" });
+  }
+
+  try {
+    // Find the locations associated with the landIds
+    const lands = await prisma.land.findMany({
+      where: {
+        id: {
+          in: landIds,
+        },
+      },
+      select: {
+        id: true,
+        locationId: true,
+      },
+    });
+
+    if (lands.length === 0) {
+      return res.status(404).json({ message: "No land entries found for the provided IDs" });
+    }
+
+    const locationIds = lands.map(land => land.locationId);
+
+    // Delete the land entries
+    await prisma.land.deleteMany({
+      where: {
+        id: {
+          in: landIds,
+        },
+      },
+    });
+
+    // Delete the location entries
+    await prisma.location.deleteMany({
+      where: {
+        id: {
+          in: locationIds,
+        },
+      },
+    });
+
+    res.status(200).json({ message: "Lands and their associated locations deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting lands and locations:", error);
+    res.status(500).json({ message: "Failed to delete lands and locations" });
+  }
+};
+
+
 // Land Management End

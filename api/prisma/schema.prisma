@@ -137,6 +137,7 @@ model Location {
   longitude      String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  lands          Land[] // Adjusted relationship
 }
 
 model Land {
@@ -153,6 +154,7 @@ model Land {
   registrationDate DateTime?
   accessibility    String?
   locationId       String     @unique @db.ObjectId
+  location         Location   @relation(fields: [locationId], references: [id])
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
   buildings        Building[]
@@ -179,28 +181,30 @@ model Building {
   architect            String?
   uses                 String?
   yearUpgraded         Int?
-  landId               String    @db.ObjectId
+  landId               String    @unique @db.ObjectId
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   land                 Land      @relation(fields: [landId], references: [id])
   products             Product[]
+  units                Unit[]
 }
 
 model Unit {
-  id            String @id @default(auto()) @map("_id") @db.ObjectId
-  name          String
-  bathRoom      Int
-  bedRoom       Int
-  numberOfUnits Int
-   floor                Int
-   size                 Float
-   description          String?
-   amenities            String[]
-   utilities            String?
-   features             String[]
-   unitType             String?
-   createdAt            DateTime @default(now())
-    updatedAt            DateTime @updatedAt
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  bathRoom     Int?
+  bedRoom      Int?
+  numberOfUnit String
+  floorLevel   Int
+  size         Float
+  description  String?
+  amenities    String[]
+  utilities    String?
+  features     String?
+  unitType     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  buildingId   String   @db.ObjectId
+  Building     Building @relation(fields: [buildingId], references: [id])
 }
 
 model Media {

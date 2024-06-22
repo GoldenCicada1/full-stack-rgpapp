@@ -73,4 +73,12 @@ router.post("/buildings", verifyToken, verifyAdmin, addBuilding);
 router.put("/buildings/:id", verifyToken, verifyAdmin, updateBuilding);
 router.delete("/buildings/:id", verifyToken, verifyAdmin, deleteBuilding);
 
+// Unit Routes
+router.get("/buildings", getBuildings);
+router.get("/buildings/:id", getBuildingById);
+router.post("/buildings", verifyToken, verifyAdmin, addBuilding);
+router.put("/buildings/:id", verifyToken, verifyAdmin, updateBuilding);
+router.delete("/buildings/:id", verifyToken, verifyAdmin, deleteBuilding);
+
+
 export default router;
