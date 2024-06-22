@@ -1,0 +1,142 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Post {
+  id         String      @id @default(auto()) @map("_id") @db.ObjectId
+  title      String
+  price      Int
+  images     String[]
+  bedroom    Int
+  bathroom   Int
+  type       Type
+  property   Property
+  createdAt  DateTime    @default(now())
+  user       User        @relation(fields: [userId], references: [id])
+  userId     String      @db.ObjectId
+  // location   Location   @relation(fields: [locationId], references: [id])
+  // locationId String     @db.ObjectId  // Ensure locationId is also ObjectId
+  land       Land        @relation(fields: [landId], references: [id])
+  landId     String      @db.ObjectId // Add this relation field
+  postDetail PostDetail?
+  savedPosts SavedPost[]
+}
+
+enum Type {
+  buy
+  rent
+}
+
+enum Property {
+  apartment
+  house
+  condo
+  land
+}
+
+model PostDetail {
+  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  desc       String
+  utilities  String?
+  pet        String?
+  income     String?
+  size       Int?
+  school     Int?
+  bus        Int?
+  restaurant Int?
+  post       Post    @relation(fields: [postId], references: [id])
+  postId     String  @unique @db.ObjectId
+}
+
+model SavedPost {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+  userId    String   @unique @db.ObjectId
+  postId    String   @unique @db.ObjectId
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+}
+
+model User {
+  id         String      @id @default(auto()) @map("_id") @db.ObjectId
+  email      String      @unique
+  username   String      @unique
+  password   String
+  avatar     String?
+  isAdmin    Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  posts      Post[]
+  savedPosts SavedPost[]
+  chats      Chat[]      @relation(fields: [chatIDs], references: [id])
+  chatIDs    String[]    @db.ObjectId
+}
+
+model Chat {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  users       User[]    @relation(fields: [userIDs], references: [id])
+  userIDs     String[]  @db.ObjectId
+  createdAt   DateTime  @default(now())
+  seenBy      String[]  @db.ObjectId
+  messages    Message[]
+  lastMessage String?
+}
+
+model Message {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  text      String
+  userId    String
+  chat      Chat     @relation(fields: [chatId], references: [id])
+  chatId    String   @db.ObjectId
+  createdAt DateTime @default(now())
+}
+
+model Location {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  name           String   @unique
+  address        String
+  city           String
+  stateRegion    String
+  zipCode        String?
+  country        String
+  neighborhood   String?
+  schoolDistrict String?
+  crimeRate      Float?
+  latitude       String
+  longitude      String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  lands          Land[]
+}
+
+model Land {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  size             Int
+  description      String
+  price            Int
+  features         String[]  @default([])
+  zoning           String?
+  soilStructure    String?
+  topography       String?
+  registered       Boolean   @default(false)
+  registrationDate DateTime?
+  accessibility    String?
+  location         Location  @relation(fields: [locationId], references: [id])
+  locationId       String    @unique @db.ObjectId
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  posts            Post[] // Add this relation to connect with the Post model
+}

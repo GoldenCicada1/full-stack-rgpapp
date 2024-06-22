@@ -13,24 +13,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Post {
-  id         String      @id @default(auto()) @map("_id") @db.ObjectId
-  title      String
-  price      Int
-  images     String[]
-  bedroom    Int
-  bathroom   Int
-  type       Type
-  property   Property
-  createdAt  DateTime    @default(now())
-  user       User        @relation(fields: [userId], references: [id])
-  userId     String      @db.ObjectId
-  // location   Location   @relation(fields: [locationId], references: [id])
-  // locationId String     @db.ObjectId  // Ensure locationId is also ObjectId
-  land       Land        @relation(fields: [landId], references: [id])
-  landId     String      @db.ObjectId // Add this relation field
-  postDetail PostDetail?
-  savedPosts SavedPost[]
+model Product {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  title         String
+  description   String
+  price         Int
+  discountPrice Int?
+  size          Float
+  furnished     Boolean
+  parking       Boolean
+  type          Type
+  category      Category
+  productType   ProductType
+  property      Property?
+  offer         Boolean
+  active        Boolean
+  landId        String?     @db.ObjectId
+  buildingId    String?     @db.ObjectId
+  mediaId       String?     @db.ObjectId
+  user          User        @relation(fields: [userId], references: [id])
+  userId        String      @db.ObjectId
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  land          Land?       @relation(fields: [landId], references: [id])
+  building      Building?   @relation(fields: [buildingId], references: [id])
+  media         Media?      @relation(fields: [mediaId], references: [id])
+  savedPosts    SavedPost[]
+}
+
+enum ProductType {
+  land
+  building
+  unit
+}
+
+enum Category {
+  residential
+  commercial
+  industrial
+  agricultural
+  specialPurpose
+  mixedUse
+  vacantLand
 }
 
 enum Type {
@@ -42,32 +66,31 @@ enum Property {
   apartment
   house
   condo
+  townhouse
+  villa
+  duplex
+  penthouse
+  studio
+  loft
+  mansion
+  cottage
+  bungalow
+  farmhouse
+  ranch
+  chalet
+  mobileHome
   land
-}
-
-model PostDetail {
-  id         String  @id @default(auto()) @map("_id") @db.ObjectId
-  desc       String
-  utilities  String?
-  pet        String?
-  income     String?
-  size       Int?
-  school     Int?
-  bus        Int?
-  restaurant Int?
-  post       Post    @relation(fields: [postId], references: [id])
-  postId     String  @unique @db.ObjectId
 }
 
 model SavedPost {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   user      User     @relation(fields: [userId], references: [id])
-  post      Post     @relation(fields: [postId], references: [id])
+  productId String   @db.ObjectId
+  product   Product  @relation(fields: [productId], references: [id])
   userId    String   @unique @db.ObjectId
-  postId    String   @unique @db.ObjectId
   createdAt DateTime @default(now())
 
-  @@unique([userId, postId])
+  @@unique([userId, productId])
 }
 
 model User {
@@ -78,7 +101,7 @@ model User {
   avatar     String?
   isAdmin    Boolean     @default(false)
   createdAt  DateTime    @default(now())
-  posts      Post[]
+  posts      Product[]
   savedPosts SavedPost[]
   chats      Chat[]      @relation(fields: [chatIDs], references: [id])
   chatIDs    String[]    @db.ObjectId
@@ -105,38 +128,93 @@ model Message {
 
 model Location {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  name           String   @unique
-  address        String
-  city           String
-  stateRegion    String
-  zipCode        String?
   country        String
-  neighborhood   String?
-  schoolDistrict String?
-  crimeRate      Float?
+  stateRegion    String
+  districtCounty String
+  ward           String
+  streetVillage  String
   latitude       String
   longitude      String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  lands          Land[]
 }
 
 model Land {
-  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  id               String     @id @default(auto()) @map("_id") @db.ObjectId
   name             String
   size             Int
   description      String
-  price            Int
-  features         String[]  @default([])
+  features         String[]   @default([])
   zoning           String?
   soilStructure    String?
   topography       String?
-  registered       Boolean   @default(false)
+  postalZipCode    String?
+  registered       Boolean    @default(false)
   registrationDate DateTime?
   accessibility    String?
-  location         Location  @relation(fields: [locationId], references: [id])
-  locationId       String    @unique @db.ObjectId
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  posts            Post[] // Add this relation to connect with the Post model
+  locationId       String     @unique @db.ObjectId
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  buildings        Building[]
+  products         Product[]
+}
+
+model Building {
+  id                   String    @id @default(auto()) @map("_id") @db.ObjectId
+  numberOfFloors       Int
+  yearBuilt            Int?
+  name                 String
+  type                 String?
+  size                 Float?
+  description          String?
+  features             String[]
+  totalBedrooms        Int?
+  totalBathrooms       Int?
+  parkingSpaces        Int?
+  amenities            String[]
+  utilities            String?
+  maintenanceCost      Float?
+  managementCompany    String?
+  constructionMaterial String?
+  architect            String?
+  uses                 String?
+  yearUpgraded         Int?
+  landId               String    @db.ObjectId
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  land                 Land      @relation(fields: [landId], references: [id])
+  products             Product[]
+}
+
+model Unit {
+  id            String @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  bathRoom      Int
+  bedRoom       Int
+  numberOfUnits Int
+   floor                Int
+   size                 Float
+   description          String?
+   amenities            String[]
+   utilities            String?
+   features             String[]
+   unitType             String?
+   createdAt            DateTime @default(now())
+    updatedAt            DateTime @updatedAt
+}
+
+model Media {
+  id                     String    @id @default(auto()) @map("_id") @db.ObjectId
+  imageUrl               String?
+  imageTitle             String?
+  imageDescription       String?
+  videoUrl               String?
+  videoTitle             String?
+  videoDescription       String?
+  virtualTourUrl         String?
+  virtualTourTitle       String?
+  virtualTourDescription String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  products               Product[]
 }
