@@ -166,84 +166,102 @@ export const updateLand = async (req, res) => {
     });
   }
 
-  let finalLocationId;
-
   try {
-    // Update or create location if locationData is provided
-    if (locationData) {
-      if (locationData.locationId) {
-        finalLocationId = locationData.locationId;
-      } else {
-        const {
-          country,
-          stateRegion,
-          districtCounty,
-          ward,
-          streetVillage,
-          latitude,
-          longitude,
-        } = locationData;
+    // Fetch the existing land and its location
+    const existingLand = await prisma.land.findUnique({
+      where: { id: landId },
+      include: { location: true },
+    });
 
-        // Validate required fields for location
-        if (!country || !latitude || !longitude) {
-          return res.status(400).json({
-            message:
-              "Location data must include country, latitude, and longitude",
-          });
-        }
-
-        // Check if the location already exists based on specified fields
-        let location = await prisma.location.findFirst({
-          where: {
-            country,
-            latitude,
-            longitude,
-          },
-        });
-
-        if (!location) {
-          // If location doesn't exist, create a new one
-          location = await prisma.location.create({
-            data: {
-              country,
-              stateRegion: stateRegion || null,
-              districtCounty: districtCounty || null,
-              ward: ward || null,
-              streetVillage: streetVillage || null,
-              latitude,
-              longitude,
-            },
-          });
-        }
-
-        // Set finalLocationId to the found or created location's id
-        finalLocationId = location.id;
-      }
+    if (!existingLand) {
+      return res.status(404).json({ message: "Land not found" });
     }
 
-    // Update the land using finalLocationId
-    const updatedLand = await prisma.land.update({
-      where: {
-        id: landId,
-      },
-      data: {
-        name,
-        size,
-        description,
-        features: features || [],
-        zoning: zoning || null,
-        soilStructure: soilStructure || null,
-        topography: topography || null,
-        postalZipCode: postalZipCode || null,
-        registered,
-        registrationDate: registrationDate ? new Date(registrationDate) : null,
-        accessibility: accessibility || null,
-        locationId: finalLocationId, // Update the locationId in Land
-      },
-      include: {
-        location: true, // Include location details in the response
-      },
-    });
+    const existingLocation = existingLand.location;
+    const {
+      country,
+      stateRegion,
+      districtCounty,
+      ward,
+      streetVillage,
+      latitude,
+      longitude,
+    } = locationData;
+
+    // Validate required fields for location
+    if (!country || !latitude || !longitude) {
+      return res.status(400).json({
+        message: "Location data must include country, latitude, and longitude",
+      });
+    }
+
+    // Check for changes in the location data
+    const updatedLocationData = {};
+    if (country !== existingLocation.country)
+      updatedLocationData.country = country;
+    if (stateRegion !== existingLocation.stateRegion)
+      updatedLocationData.stateRegion = stateRegion;
+    if (districtCounty !== existingLocation.districtCounty)
+      updatedLocationData.districtCounty = districtCounty;
+    if (ward !== existingLocation.ward) updatedLocationData.ward = ward;
+    if (streetVillage !== existingLocation.streetVillage)
+      updatedLocationData.streetVillage = streetVillage;
+    if (latitude !== existingLocation.latitude)
+      updatedLocationData.latitude = latitude;
+    if (longitude !== existingLocation.longitude)
+      updatedLocationData.longitude = longitude;
+
+    // Update the location if there are changes
+    if (Object.keys(updatedLocationData).length > 0) {
+      updatedLocationData.updatedAt = new Date();
+      await prisma.location.update({
+        where: { id: existingLocation.id },
+        data: updatedLocationData,
+      });
+    }
+
+    // Check for changes in the land data
+    const updatedLandData = {};
+    if (name !== existingLand.name) updatedLandData.name = name;
+    if (size !== existingLand.size) updatedLandData.size = size;
+    if (description !== existingLand.description)
+      updatedLandData.description = description;
+    if (features !== existingLand.features) updatedLandData.features = features;
+    if (zoning !== existingLand.zoning) updatedLandData.zoning = zoning;
+    if (soilStructure !== existingLand.soilStructure)
+      updatedLandData.soilStructure = soilStructure;
+    if (topography !== existingLand.topography)
+      updatedLandData.topography = topography;
+    if (postalZipCode !== existingLand.postalZipCode)
+      updatedLandData.postalZipCode = postalZipCode;
+    if (registered !== existingLand.registered)
+      updatedLandData.registered = registered;
+    if (
+      registrationDate &&
+      new Date(registrationDate).toISOString() !==
+        existingLand.registrationDate.toISOString()
+    ) {
+      updatedLandData.registrationDate = new Date(registrationDate);
+    }
+    if (accessibility !== existingLand.accessibility)
+      updatedLandData.accessibility = accessibility;
+
+    // Add updatedAt timestamp if there are changes
+    if (Object.keys(updatedLandData).length > 0) {
+      updatedLandData.updatedAt = new Date();
+    }
+
+    // Update the land if there are changes
+    let updatedLand;
+    if (Object.keys(updatedLandData).length > 0) {
+      updatedLand = await prisma.land.update({
+        where: { id: landId },
+        data: updatedLandData,
+        include: { location: true }, // Include location details in the response
+      });
+    } else {
+      updatedLand = existingLand;
+    }
 
     res.status(200).json(updatedLand);
   } catch (error) {
@@ -278,7 +296,9 @@ export const deleteLand = async (req, res) => {
       where: { id: locationId },
     });
 
-    res.status(200).json({ message: "Land and associated location deleted successfully" });
+    res
+      .status(200)
+      .json({ message: "Land and associated location deleted successfully" });
   } catch (error) {
     console.error("Error deleting land and location:", error);
     res.status(500).json({ message: "Failed to delete land and location" });
@@ -289,7 +309,9 @@ export const deleteMultipleLands = async (req, res) => {
   const { landIds } = req.body; // Assuming the landIds are passed in the request body
 
   if (!landIds || !Array.isArray(landIds) || landIds.length === 0) {
-    return res.status(400).json({ message: "landIds is required and should be a non-empty array" });
+    return res
+      .status(400)
+      .json({ message: "landIds is required and should be a non-empty array" });
   }
 
   try {
@@ -307,10 +329,12 @@ export const deleteMultipleLands = async (req, res) => {
     });
 
     if (lands.length === 0) {
-      return res.status(404).json({ message: "No land entries found for the provided IDs" });
+      return res
+        .status(404)
+        .json({ message: "No land entries found for the provided IDs" });
     }
 
-    const locationIds = lands.map(land => land.locationId);
+    const locationIds = lands.map((land) => land.locationId);
 
     // Delete the land entries
     await prisma.land.deleteMany({
@@ -330,12 +354,13 @@ export const deleteMultipleLands = async (req, res) => {
       },
     });
 
-    res.status(200).json({ message: "Lands and their associated locations deleted successfully" });
+    res.status(200).json({
+      message: "Lands and their associated locations deleted successfully",
+    });
   } catch (error) {
     console.error("Error deleting lands and locations:", error);
     res.status(500).json({ message: "Failed to delete lands and locations" });
   }
 };
-
 
 // Land Management End
