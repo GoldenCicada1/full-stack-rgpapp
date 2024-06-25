@@ -27,7 +27,7 @@ export const getUnits = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch units" });
   }
 };
-
+ 
 export const getUnitById = async (req, res) => {};
 export const addUnit = async (req, res) => {
   const {
@@ -298,7 +298,6 @@ export const updateUnit = async (req, res) => {
     locationData,
   } = req.body;
 
-  console.log("req.body", req.body); // Debugging: Log the request body to see what's being sent
 
   // Validate required fields for unit update
   if (
