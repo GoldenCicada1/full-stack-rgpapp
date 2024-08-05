@@ -1,6 +1,10 @@
+import validator from "validator";
 import prisma from "../lib/prisma.js";
 import jwt from "jsonwebtoken";
+import logger from "../lib/logger.js"; // Import the logger
 import { generateSequentialId } from "../lib/idGenerator.js"; // Import the ID generator function
+import { processLocationData } from "../lib/addLocation.js"; // Import the location processing function
+import { Prisma } from "@prisma/client"; // Import Prisma errors
 
 // Land Management Start
 export const getLands = async (req, res) => {
@@ -56,95 +60,126 @@ export const addLand = async (req, res) => {
     locationData,
   } = req.body;
 
+  // Input sanitization
+  const sanitizedName = validator.escape(name);
+  const sanitizedDescription = validator.escape(description);
+  const sanitizedSize = Number(size); // Convert to number directly
+  const sanitizedFeatures = Array.isArray(features)
+    ? features.map((f) => validator.escape(f))
+    : [];
+  const sanitizedZoning = validator.escape(zoning || "");
+  const sanitizedSoilStructure = validator.escape(soilStructure || "");
+  const sanitizedTopography = validator.escape(topography || "");
+  const sanitizedPostalZipCode = validator.escape(postalZipCode || "");
+  const sanitizedAccessibility = validator.escape(accessibility || "");
+
   // Validate required fields for land
-  if (!name || !size || !description || !locationData) {
+  if (
+    !sanitizedName ||
+    !sanitizedSize ||
+    !sanitizedDescription ||
+    !locationData
+  ) {
     return res.status(400).json({
       message: "name, size, description, and locationData are required fields",
     });
   }
 
   try {
-    let finalLocationId;
+    // Use Prisma transaction to ensure atomic operations
+    const newLand = await prisma.$transaction(async (prisma) => {
+      // Process location data
+      const { finalLocationId, locationExists } = await processLocationData(
+        locationData,
+        prisma
+      );
 
-    // Process location data first
-    if (locationData.locationId) {
-      finalLocationId = locationData.locationId;
-    } else {
-      const {
-        country,
-        stateRegion,
-        districtCounty,
-        ward,
-        streetVillage,
-        latitude,
-        longitude,
-      } = locationData;
-
-      // Validate required fields for location
-      if (!country || !latitude || !longitude) {
-        return res.status(400).json({
-          message:
-            "Location data must include country, latitude, and longitude",
-        });
-      }
-
-      // Check if the location already exists based on specified fields
-      let location = await prisma.location.findFirst({
+      // Check if land already exists
+      const existingLand = await prisma.land.findFirst({
         where: {
-          country,
-          latitude,
-          longitude,
+          name: sanitizedName,
+          locationId: finalLocationId,
         },
       });
 
-      if (!location) {
-        // If location doesn't exist, create a new one
-        location = await prisma.location.create({
-          data: {
-            country,
-            stateRegion: stateRegion || null,
-            districtCounty: districtCounty || null,
-            ward: ward || null,
-            streetVillage: streetVillage || null,
-            latitude,
-            longitude,
-          },
-        });
+      if (existingLand) {
+        throw new Error("Land with the same name and location already exists");
       }
 
-      // Set finalLocationId to the found or created location's id
-      finalLocationId = location.id;
-    }
+      // Generate a unique ID for the new land entry
+      const customId = await generateSequentialId();
 
-    // Generate a unique ID for the new land entry
-    const customId = await generateSequentialId();
+      // Create the land
+      const createdLand = await prisma.land.create({
+        data: {
+          name: sanitizedName,
+          size: sanitizedSize,
+          description: sanitizedDescription,
+          features: sanitizedFeatures,
+          zoning: sanitizedZoning,
+          soilStructure: sanitizedSoilStructure,
+          topography: sanitizedTopography,
+          postalZipCode: sanitizedPostalZipCode,
+          registered: registered || false,
+          registrationDate: registrationDate
+            ? new Date(registrationDate)
+            : null,
+          accessibility: sanitizedAccessibility,
+          locationId: finalLocationId,
+          customId: customId,
+        },
+        include: {
+          location: true,
+        },
+      });
 
-    // Create the land using finalLocationId and uniqueId
-    const newLand = await prisma.land.create({
-      data: {
-        name,
-        size,
-        description,
-        features: features || [],
-        zoning: zoning || null,
-        soilStructure: soilStructure || null,
-        topography: topography || null,
-        postalZipCode: postalZipCode || null,
-        registered: registered || false,
-        registrationDate: registrationDate ? new Date(registrationDate) : null,
-        accessibility: accessibility || null,
-        locationId: finalLocationId, // Properly connect location by id
-        customId: customId, // Add custom ID
-      },
-      include: {
-        location: true, // Include location details in the response
-      },
+      // Return createdLand from the transaction
+      return { createdLand, locationExists };
     });
 
-    res.status(201).json(newLand);
+    // Respond with different messages based on whether the location was new or existing
+    if (newLand.locationExists) {
+      res.status(200).json({
+        message: "Land added successfully. The location already existed.",
+        data: newLand.createdLand,
+      });
+    } else {
+      res.status(201).json({
+        message: "Land added successfully. A new location was created.",
+        data: newLand.createdLand,
+      });
+    }
   } catch (error) {
-    console.error("Error adding land:", error);
-    res.status(500).json({ message: "Failed to add land" });
+    // Log the error
+    logger.error("Error adding land:", error);
+
+    // Respond to the client with a custom error message
+    if (
+      error.message === "Land with the same name and location already exists"
+    ) {
+      res.status(409).json({
+        message: "Land with the same name and location already exists",
+      });
+    } else if (error.message.includes("Location")) {
+      res.status(409).json({
+        message: "The location already exists",
+      });
+    } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      res.status(400).json({
+        message: "Failed to add land due to a database request error",
+        details: error.message,
+      });
+    } else if (error instanceof Prisma.PrismaClientUnknownRequestError) {
+      res.status(500).json({
+        message: "Failed to add land due to an unknown database error",
+        details: error.message,
+      });
+    } else {
+      res.status(500).json({
+        message: "Failed to add land due to an internal server error",
+        details: error.message,
+      });
+    }
   }
 };
 export const updateLand = async (req, res) => {
