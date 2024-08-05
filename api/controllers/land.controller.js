@@ -133,7 +133,7 @@ export const addLand = async (req, res) => {
         },
       });
 
-      // Return createdLand from the transaction
+      // Return createdLand and locationExists from the transaction
       return { createdLand, locationExists };
     });
 

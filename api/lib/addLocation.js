@@ -6,8 +6,30 @@ import logger from "../lib/logger.js"; // Import the logger
 export const processLocationData = async (locationData, prisma) => {
     let finalLocationId;
     let locationExists = false; // To indicate if the location already exists
-
+  
   try {
+
+    // Check if locationId is provided
+    if (locationData.locationId) {
+        // Validate and sanitize locationId
+        const sanitizedLocationId = validator.escape(locationData.locationId);
+
+        // Check if the provided locationId exists
+      const location = await prisma.location.findUnique({
+        where: { id: sanitizedLocationId },
+      });
+
+      if (location) {
+        // Location exists, use the provided locationId
+        finalLocationId = location.id;
+        locationExists = true;
+      } else {
+        // Provided locationId does not exist
+        throw new Error("Provided locationId does not exist");
+      }
+    } else {
+        // If no locationId provided, create a new location
+
     // Sanitize input
     const sanitizedCountry = validator.escape(locationData.country);
     const sanitizedStateRegion = validator.escape(
@@ -29,7 +51,7 @@ export const processLocationData = async (locationData, prisma) => {
       .toFloat(locationData.longitude)
       .toString();
 
-    // Check if location already exists
+    // Check if location already exists based on country, latitude, and longitude
     let location = await prisma.location.findFirst({
       where: {
         country: sanitizedCountry,
@@ -57,6 +79,7 @@ export const processLocationData = async (locationData, prisma) => {
       });
       finalLocationId = location.id;
     }
+}
 
     // Return whether the location exists and the final location ID
     return { finalLocationId, locationExists };
