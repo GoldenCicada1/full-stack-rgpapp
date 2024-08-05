@@ -7,18 +7,30 @@ import { processLocationData } from "../lib/addLocation.js"; // Import the locat
 import { Prisma } from "@prisma/client"; // Import Prisma errors
 import { updateLocationData } from "../lib/updateLocationData.js"; // Adjust the path as necessary
 
+// Utility function to check if ID is a valid ObjectID
+const isObjectId = (id) => {
+  // Assuming ObjectIDs are 24-character hex strings
+  return /^[a-fA-F0-9]{24}$/.test(id);
+};
+
 // Land Management Start
 export const getLands = async (req, res) => {
   try {
-    const lands = await prisma.land.findMany({
-      include: {
-        location: true, // Include location details
-      },
+    // Use Prisma transaction to ensure atomic operations
+    const lands = await prisma.$transaction(async (tx) => {
+      return await tx.land.findMany({
+        include: {
+          location: true, // Include location details
+        },
+      });
     });
 
     res.status(200).json(lands);
   } catch (err) {
-    console.error("Error fetching lands: ", err);
+    // Log the error with detailed information
+    logger.error("Error fetching lands:", err);
+
+    // Respond to the client with a custom error message
     res.status(500).json({ message: "Failed to get lands" });
   }
 };
@@ -26,22 +38,45 @@ export const getLandById = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const land = await prisma.land.findUnique({
-      where: {
-        id,
-      },
-      include: {
-        location: true, // Use lowercase 'location' as defined in your Prisma schema
-      },
-    });
+    // Use Prisma transaction to ensure atomic operations
+    const land = await prisma.$transaction(async (tx) => {
+      let result;
 
-    if (!land) {
-      return res.status(404).json({ message: "Land not found" });
-    }
+      if (isObjectId(id)) {
+        // Query using Prisma's ObjectID
+        result = await tx.land.findUnique({
+          where: {
+            id: id, // ObjectID query
+          },
+          include: {
+            location: true,
+          },
+        });
+      } else {
+        // Query using custom ID format
+        result = await tx.land.findFirst({
+          where: {
+            customId: id, // Replace with your actual custom ID field
+          },
+          include: {
+            location: true,
+          },
+        });
+      }
+
+      if (!result) {
+        throw new Error("Land not found");
+      }
+
+      return result;
+    });
 
     res.status(200).json(land);
   } catch (error) {
-    console.error("Error fetching land by ID:", error);
+    // Log the error
+    logger.error("Error fetching land by ID:", error);
+
+    // Respond to the client with a custom error message
     res.status(500).json({ message: "Failed to fetch land" });
   }
 };
