@@ -142,6 +142,7 @@ model Location {
 
 model Land {
   id               String     @id @default(auto()) @map("_id") @db.ObjectId
+  customId         String     @unique
   name             String
   size             Int
   description      String

@@ -1,5 +1,6 @@
 import prisma from "../lib/prisma.js";
 import jwt from "jsonwebtoken";
+import { generateSequentialId } from "../lib/idGenerator.js"; // Import the ID generator function
 
 // Land Management Start
 export const getLands = async (req, res) => {
@@ -115,7 +116,10 @@ export const addLand = async (req, res) => {
       finalLocationId = location.id;
     }
 
-    // Create the land using finalLocationId
+    // Generate a unique ID for the new land entry
+    const customId = await generateSequentialId();
+
+    // Create the land using finalLocationId and uniqueId
     const newLand = await prisma.land.create({
       data: {
         name,
@@ -130,6 +134,7 @@ export const addLand = async (req, res) => {
         registrationDate: registrationDate ? new Date(registrationDate) : null,
         accessibility: accessibility || null,
         locationId: finalLocationId, // Properly connect location by id
+        customId: customId, // Add custom ID
       },
       include: {
         location: true, // Include location details in the response
