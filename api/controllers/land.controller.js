@@ -13,6 +13,9 @@ const isObjectId = (id) => {
   return /^[a-fA-F0-9]{24}$/.test(id);
 };
 
+// Utility function to check if ID is a valid custom ID
+const isCustomId = (id) => /^[A-Za-z0-9]{6}$/.test(id);
+
 // Land Management Start
 export const getLands = async (req, res) => {
   try {
@@ -267,21 +270,21 @@ export const updateLand = async (req, res) => {
   // Use Prisma transaction for atomic operations
   try {
     const result = await prisma.$transaction(async (tx) => {
-       // Determine if landId is a custom ID or ObjectID
-       let existingLand;
-       if (/^[A-Za-z0-9]+$/.test(landId)) {
-         // Custom ID pattern check
-         existingLand = await tx.land.findUnique({
-           where: { customId: landId }, // Assuming you have a customId field
-           include: { location: true },
-         });
-       } else {
-         // ObjectID pattern check
-         existingLand = await tx.land.findUnique({
-           where: { id: landId }, // Use default Prisma ObjectID field
-           include: { location: true },
-         });
-       }
+      // Determine if landId is a custom ID or ObjectID
+      let existingLand;
+      if (/^[A-Za-z0-9]+$/.test(landId)) {
+        // Custom ID pattern check
+        existingLand = await tx.land.findUnique({
+          where: { customId: landId }, // Assuming you have a customId field
+          include: { location: true },
+        });
+      } else {
+        // ObjectID pattern check
+        existingLand = await tx.land.findUnique({
+          where: { id: landId }, // Use default Prisma ObjectID field
+          include: { location: true },
+        });
+      }
 
       if (!existingLand) {
         throw new Error("Land not found");
@@ -331,7 +334,7 @@ export const updateLand = async (req, res) => {
       let updatedLand = existingLand; // Initialize with existingLand to handle the case where there are no changes
       if (Object.keys(updatedLandData).length > 0) {
         updatedLand = await tx.land.update({
-          where: { id: existingLand.id },  // Use the correct ID field
+          where: { id: existingLand.id }, // Use the correct ID field
           data: updatedLandData,
           include: { location: true }, // Include location details in the response
         });
@@ -349,42 +352,65 @@ export const updateLand = async (req, res) => {
     res.status(500).json({ message: "Failed to update land" });
   }
 };
-
 export const deleteLand = async (req, res) => {
   const landId = req.params.id; // Assuming the landId is passed as a route parameter
 
   try {
-    // Find the land by id to get the associated locationId
-    const land = await prisma.land.findUnique({
-      where: { id: landId },
-      select: { locationId: true },
+    // Use Prisma transaction to ensure atomic operations
+    const result = await prisma.$transaction(async (tx) => {
+      let land;
+      let objectIdToDelete;
+
+      if (isCustomId(landId)) {
+        // Fetch the actual ObjectID using custom ID
+        land = await tx.land.findUnique({
+          where: { customId: landId }, // Query using custom ID
+          select: { id: true, locationId: true }, // Fetch the actual ObjectID and associated locationId
+        });
+
+        if (!land) {
+          throw new Error("Land not found");
+        }
+
+        objectIdToDelete = land.id; // Use the fetched ObjectID for deletion
+      } else {
+        // Handle case where the ID is an ObjectID
+        objectIdToDelete = landId; // Directly use the provided ObjectID
+
+        land = await tx.land.findUnique({
+          where: { id: objectIdToDelete },
+          select: { locationId: true },
+        });
+
+        if (!land) {
+          throw new Error("Land not found");
+        }
+      }
+
+      const locationId = land.locationId;
+
+      // Delete the land entry
+      await tx.land.delete({
+        where: { id: objectIdToDelete }, // Use the ObjectID for deletion
+      });
+
+      // Delete the location entry associated with the land
+      await tx.location.delete({
+        where: { id: locationId },
+      });
+
+      return { message: "Land and associated location deleted successfully" };
     });
 
-    if (!land) {
-      return res.status(404).json({ message: "Land not found" });
-    }
-
-    const locationId = land.locationId;
-
-    // Delete the land entry
-    await prisma.land.delete({
-      where: { id: landId },
-    });
-
-    // Delete the location entry associated with the land
-    await prisma.location.delete({
-      where: { id: locationId },
-    });
-
-    res
-      .status(200)
-      .json({ message: "Land and associated location deleted successfully" });
+    res.status(200).json(result);
   } catch (error) {
-    console.error("Error deleting land and location:", error);
+    // Log the error
+    logger.error("Error deleting land and location:", error);
+
+    // Respond to the client with a custom error message
     res.status(500).json({ message: "Failed to delete land and location" });
   }
 };
-
 export const deleteMultipleLands = async (req, res) => {
   const { landIds } = req.body; // Assuming the landIds are passed in the request body
 
@@ -395,50 +421,86 @@ export const deleteMultipleLands = async (req, res) => {
   }
 
   try {
-    // Find the locations associated with the landIds
-    const lands = await prisma.land.findMany({
-      where: {
-        id: {
-          in: landIds,
+    // Use Prisma transaction to ensure atomic operations
+    const result = await prisma.$transaction(async (tx) => {
+      // Separate IDs into custom IDs and ObjectIDs
+      const [customIds, objectIds] = landIds.reduce(
+        ([custom, object], id) => {
+          if (isCustomId(id)) {
+            custom.push(id);
+          } else {
+            object.push(id);
+          }
+          return [custom, object];
         },
-      },
-      select: {
-        id: true,
-        locationId: true,
-      },
-    });
+        [[], []]
+      );
 
-    if (lands.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No land entries found for the provided IDs" });
-    }
+      // Fetch ObjectIDs for custom IDs
+      let lands = [];
+      if (customIds.length > 0) {
+        lands = await tx.land.findMany({
+          where: {
+            customId: {
+              in: customIds,
+            },
+          },
+          select: {
+            id: true,
+            locationId: true,
+          },
+        });
+      }
 
-    const locationIds = lands.map((land) => land.locationId);
-
-    // Delete the land entries
-    await prisma.land.deleteMany({
-      where: {
-        id: {
-          in: landIds,
+      // Include lands with ObjectIDs directly
+      const landsWithObjectIds = await tx.land.findMany({
+        where: {
+          id: {
+            in: objectIds,
+          },
         },
-      },
-    });
-
-    // Delete the location entries
-    await prisma.location.deleteMany({
-      where: {
-        id: {
-          in: locationIds,
+        select: {
+          id: true,
+          locationId: true,
         },
-      },
+      });
+
+      // Combine both results
+      lands = [...lands, ...landsWithObjectIds];
+
+      if (lands.length === 0) {
+        throw new Error("No land entries found for the provided IDs");
+      }
+
+      const locationIds = lands.map((land) => land.locationId);
+
+      // Delete the land entries
+      await tx.land.deleteMany({
+        where: {
+          id: {
+            in: lands.map((land) => land.id),
+          },
+        },
+      });
+
+      // Delete the location entries
+      await tx.location.deleteMany({
+        where: {
+          id: {
+            in: locationIds,
+          },
+        },
+      });
+
+      return { message: "Lands and their associated locations deleted successfully" };
     });
 
-    res.status(200).json({
-      message: "Lands and their associated locations deleted successfully",
-    });
+    res.status(200).json(result);
   } catch (error) {
-    console.error("Error deleting lands and locations:", error);
+    // Log the error
+    logger.error("Error deleting lands and locations:", error);
+
+    // Respond to the client with a custom error message
     res.status(500).json({ message: "Failed to delete lands and locations" });
   }
 };
