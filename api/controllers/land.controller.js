@@ -5,6 +5,7 @@ import logger from "../lib/logger.js"; // Import the logger
 import { generateSequentialId } from "../lib/idGenerator.js"; // Import the ID generator function
 import { processLocationData } from "../lib/addLocation.js"; // Import the location processing function
 import { Prisma } from "@prisma/client"; // Import Prisma errors
+import { updateLocationData } from "../lib/updateLocationData.js"; // Adjust the path as necessary
 
 // Land Management Start
 export const getLands = async (req, res) => {
@@ -199,113 +200,117 @@ export const updateLand = async (req, res) => {
     locationData,
   } = req.body;
 
+  // Validate and sanitize land data
+  const sanitizedName = validator.escape(name);
+  const sanitizedSize = Number(size); // Convert to number directly
+  const sanitizedDescription = validator.escape(description);
+  const sanitizedFeatures = Array.isArray(features)
+    ? features.map((f) => validator.escape(f))
+    : [];
+  const sanitizedZoning = validator.escape(zoning || "");
+  const sanitizedSoilStructure = validator.escape(soilStructure || "");
+  const sanitizedTopography = validator.escape(topography || "");
+  const sanitizedPostalZipCode = validator.escape(postalZipCode || "");
+  const sanitizedRegistered = registered || false;
+  const sanitizedRegistrationDate = registrationDate
+    ? new Date(registrationDate)
+    : null;
+  const sanitizedAccessibility = validator.escape(accessibility || "");
+
   // Validate required fields for land
-  if (!name || !size || !description || !locationData) {
+  if (
+    !sanitizedName ||
+    !sanitizedSize ||
+    !sanitizedDescription ||
+    !locationData
+  ) {
     return res.status(400).json({
       message: "name, size, description, and locationData are required fields",
     });
   }
 
+  // Use Prisma transaction for atomic operations
   try {
-    // Fetch the existing land and its location
-    const existingLand = await prisma.land.findUnique({
-      where: { id: landId },
-      include: { location: true },
+    const result = await prisma.$transaction(async (tx) => {
+       // Determine if landId is a custom ID or ObjectID
+       let existingLand;
+       if (/^[A-Za-z0-9]+$/.test(landId)) {
+         // Custom ID pattern check
+         existingLand = await tx.land.findUnique({
+           where: { customId: landId }, // Assuming you have a customId field
+           include: { location: true },
+         });
+       } else {
+         // ObjectID pattern check
+         existingLand = await tx.land.findUnique({
+           where: { id: landId }, // Use default Prisma ObjectID field
+           include: { location: true },
+         });
+       }
+
+      if (!existingLand) {
+        throw new Error("Land not found");
+      }
+
+      const existingLocation = existingLand.location;
+
+      // Process and update the location data
+      await updateLocationData(existingLocation, locationData, tx);
+
+      // Check for changes in the land data
+      const updatedLandData = {};
+      if (sanitizedName !== existingLand.name)
+        updatedLandData.name = sanitizedName;
+      if (sanitizedSize !== existingLand.size)
+        updatedLandData.size = sanitizedSize;
+      if (sanitizedDescription !== existingLand.description)
+        updatedLandData.description = sanitizedDescription;
+      if (sanitizedFeatures !== existingLand.features)
+        updatedLandData.features = sanitizedFeatures;
+      if (sanitizedZoning !== existingLand.zoning)
+        updatedLandData.zoning = sanitizedZoning;
+      if (sanitizedSoilStructure !== existingLand.soilStructure)
+        updatedLandData.soilStructure = sanitizedSoilStructure;
+      if (sanitizedTopography !== existingLand.topography)
+        updatedLandData.topography = sanitizedTopography;
+      if (sanitizedPostalZipCode !== existingLand.postalZipCode)
+        updatedLandData.postalZipCode = sanitizedPostalZipCode;
+      if (sanitizedRegistered !== existingLand.registered)
+        updatedLandData.registered = sanitizedRegistered;
+      if (
+        sanitizedRegistrationDate &&
+        sanitizedRegistrationDate.toISOString() !==
+          existingLand.registrationDate.toISOString()
+      ) {
+        updatedLandData.registrationDate = sanitizedRegistrationDate;
+      }
+      if (sanitizedAccessibility !== existingLand.accessibility)
+        updatedLandData.accessibility = sanitizedAccessibility;
+
+      // Add updatedAt timestamp if there are changes
+      if (Object.keys(updatedLandData).length > 0) {
+        updatedLandData.updatedAt = new Date();
+      }
+
+      // Update the land if there are changes
+      let updatedLand = existingLand; // Initialize with existingLand to handle the case where there are no changes
+      if (Object.keys(updatedLandData).length > 0) {
+        updatedLand = await tx.land.update({
+          where: { id: existingLand.id },  // Use the correct ID field
+          data: updatedLandData,
+          include: { location: true }, // Include location details in the response
+        });
+      }
+
+      return updatedLand;
     });
 
-    if (!existingLand) {
-      return res.status(404).json({ message: "Land not found" });
-    }
-
-    const existingLocation = existingLand.location;
-    const {
-      country,
-      stateRegion,
-      districtCounty,
-      ward,
-      streetVillage,
-      latitude,
-      longitude,
-    } = locationData;
-
-    // Validate required fields for location
-    if (!country || !latitude || !longitude) {
-      return res.status(400).json({
-        message: "Location data must include country, latitude, and longitude",
-      });
-    }
-
-    // Check for changes in the location data
-    const updatedLocationData = {};
-    if (country !== existingLocation.country)
-      updatedLocationData.country = country;
-    if (stateRegion !== existingLocation.stateRegion)
-      updatedLocationData.stateRegion = stateRegion;
-    if (districtCounty !== existingLocation.districtCounty)
-      updatedLocationData.districtCounty = districtCounty;
-    if (ward !== existingLocation.ward) updatedLocationData.ward = ward;
-    if (streetVillage !== existingLocation.streetVillage)
-      updatedLocationData.streetVillage = streetVillage;
-    if (latitude !== existingLocation.latitude)
-      updatedLocationData.latitude = latitude;
-    if (longitude !== existingLocation.longitude)
-      updatedLocationData.longitude = longitude;
-
-    // Update the location if there are changes
-    if (Object.keys(updatedLocationData).length > 0) {
-      updatedLocationData.updatedAt = new Date();
-      await prisma.location.update({
-        where: { id: existingLocation.id },
-        data: updatedLocationData,
-      });
-    }
-
-    // Check for changes in the land data
-    const updatedLandData = {};
-    if (name !== existingLand.name) updatedLandData.name = name;
-    if (size !== existingLand.size) updatedLandData.size = size;
-    if (description !== existingLand.description)
-      updatedLandData.description = description;
-    if (features !== existingLand.features) updatedLandData.features = features;
-    if (zoning !== existingLand.zoning) updatedLandData.zoning = zoning;
-    if (soilStructure !== existingLand.soilStructure)
-      updatedLandData.soilStructure = soilStructure;
-    if (topography !== existingLand.topography)
-      updatedLandData.topography = topography;
-    if (postalZipCode !== existingLand.postalZipCode)
-      updatedLandData.postalZipCode = postalZipCode;
-    if (registered !== existingLand.registered)
-      updatedLandData.registered = registered;
-    if (
-      registrationDate &&
-      new Date(registrationDate).toISOString() !==
-        existingLand.registrationDate.toISOString()
-    ) {
-      updatedLandData.registrationDate = new Date(registrationDate);
-    }
-    if (accessibility !== existingLand.accessibility)
-      updatedLandData.accessibility = accessibility;
-
-    // Add updatedAt timestamp if there are changes
-    if (Object.keys(updatedLandData).length > 0) {
-      updatedLandData.updatedAt = new Date();
-    }
-
-    // Update the land if there are changes
-    let updatedLand;
-    if (Object.keys(updatedLandData).length > 0) {
-      updatedLand = await prisma.land.update({
-        where: { id: landId },
-        data: updatedLandData,
-        include: { location: true }, // Include location details in the response
-      });
-    } else {
-      updatedLand = existingLand;
-    }
-
-    res.status(200).json(updatedLand);
+    res.status(200).json(result);
   } catch (error) {
-    console.error("Error updating land:", error);
+    // Log the error
+    logger.error("Error updating land:", error);
+
+    // Respond to the client with a custom error message
     res.status(500).json({ message: "Failed to update land" });
   }
 };
