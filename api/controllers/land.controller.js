@@ -492,7 +492,9 @@ export const deleteMultipleLands = async (req, res) => {
         },
       });
 
-      return { message: "Lands and their associated locations deleted successfully" };
+      return {
+        message: "Lands and their associated locations deleted successfully",
+      };
     });
 
     res.status(200).json(result);

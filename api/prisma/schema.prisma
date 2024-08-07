@@ -164,6 +164,7 @@ model Land {
 
 model Building {
   id                   String    @id @default(auto()) @map("_id") @db.ObjectId
+  customId             String    @unique
   numberOfFloors       Int
   yearBuilt            Int?
   name                 String

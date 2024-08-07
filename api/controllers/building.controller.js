@@ -1,5 +1,10 @@
+import validator from "validator";
 import prisma from "../lib/prisma.js";
 import jwt from "jsonwebtoken";
+import logger from "../lib/logger.js"; // Import the logger
+import { processLandData } from "../lib/addLand.js"; // Adjust the import path as needed
+import { generateBuildingCustomId } from '../lib/idGenerator.js'; // Adjust the import path as needed
+
 
 // Building Management Start
 export const getBuildings = async (req, res) => {
@@ -103,22 +108,9 @@ export const addBuilding = async (req, res) => {
     uses,
     yearUpgraded,
     landData,
-    locationData,
   } = req.body;
 
-  // Validate required fields for locationData
-  if (
-    !locationData ||
-    !locationData.country ||
-    !locationData.latitude ||
-    !locationData.longitude
-  ) {
-    return res.status(400).json({
-      message: "locationData must include country, latitude, and longitude",
-    });
-  }
-
-  // Validate required fields for landData
+  // Validate and sanitize required fields for landData
   if (
     !landData ||
     !landData.landName ||
@@ -131,144 +123,96 @@ export const addBuilding = async (req, res) => {
     });
   }
 
+  const sanitizedLandData = {
+    ...landData,
+    landName: validator.escape(landData.landName),
+    landSize: Number(landData.landSize), // Convert to number directly
+    landDescription: validator.escape(landData.landDescription),
+    landFeatures: Array.isArray(landData.landFeatures)
+      ? landData.landFeatures.map((f) => validator.escape(f))
+      : [],
+    landZoning: validator.escape(landData.landZoning || ""),
+    landSoilStructure: validator.escape(landData.landSoilStructure || ""),
+    landTopography: validator.escape(landData.landTopography || ""),
+    landPostalZipCode: validator.escape(landData.landPostalZipCode || ""),
+    landRegistered: Boolean(landData.landRegistered),
+    landRegistrationDate: landData.landRegistrationDate
+      ? new Date(landData.landRegistrationDate)
+      : null,
+    landAccessibility: validator.escape(landData.landAccessibility || ""),
+  };
+
   try {
-    let finalLocationId;
-    let finalLandId;
+    const result = await prisma.$transaction(async (tx) => {
+      // Process land data within the transaction
+      const { finalLandId, landExists } = await processLandData(
+        sanitizedLandData,
+        tx
+      );
 
-    // Process location data first
-    if (locationData.locationId) {
-      finalLocationId = locationData.locationId;
-    } else {
-      const {
-        country,
-        stateRegion,
-        districtCounty,
-        ward,
-        streetVillage,
-        latitude,
-        longitude,
-      } = locationData;
-
-      // Validate required fields for location
-      if (!country || !latitude || !longitude) {
-        return res.status(400).json({
-          message:
-            "Location data must include country, latitude, and longitude",
-        });
+      if (!finalLandId) {
+        throw new Error("Failed to get or create land.");
       }
 
-      // Check if the location already exists based on country and coordinates
-      let location = await prisma.location.findFirst({
-        where: {
-          country,
-          latitude,
-          longitude,
-        },
-      });
+      // Generate the custom ID for the building
+      const customId = await generateBuildingCustomId(finalLandId);
+      console.log("Generated customId:", customId, "Type:", typeof customId); // Debug
 
-      if (!location) {
-        // If location doesn't exist, create a new one
-        location = await prisma.location.create({
-          data: {
-            country,
-            stateRegion: stateRegion || null,
-            districtCounty: districtCounty || null,
-            ward: ward || null,
-            streetVillage: streetVillage || null,
-            latitude,
-            longitude,
-          },
-        });
-      }
 
-      // Set finalLocationId to the found or created location's id
-      finalLocationId = location.id;
-    }
+      // Ensure numberOfFloors is converted to number
+      const numberOfFloorsValue = typeof numberOfFloors === 'string'
+        ? parseInt(numberOfFloors, 10)
+        : numberOfFloors;
+        
 
-    // Process land data next
-    if (landData.landId) {
-      finalLandId = landData.landId;
-    } else {
-      const {
-        landName,
-        landSize,
-        landDescription,
-        landFeatures,
-        landZoning,
-        landSoilStructure,
-        landTopography,
-        landPostalZipCode,
-        landRegistered,
-        landRegistrationDate,
-        landAccessibility,
-      } = landData;
-
-      // Validate required fields for land
-      if (!landName || !landSize || !landDescription) {
-        return res.status(400).json({
-          message:
-            "landName, landSize, and landDescription are required fields for landData",
-        });
-      }
-
-      // Create the land using finalLocationId
-      const newLand = await prisma.land.create({
+      // Create the building using finalLandId and customId
+      const newBuilding = await tx.building.create({
         data: {
-          name: landName,
-          size: landSize,
-          description: landDescription,
-          features: landFeatures || [],
-          zoning: landZoning || null,
-          soilStructure: landSoilStructure || null,
-          topography: landTopography || null,
-          postalZipCode: landPostalZipCode || null,
-          registered: landRegistered || null,
-          registrationDate: landRegistrationDate || null,
-          accessibility: landAccessibility || null,
-          locationId: finalLocationId,
+          // numberOfFloors: validator.toInt(numberOfFloors, 10) || null,
+          numberOfFloors: Number.isInteger(numberOfFloorsValue) ? numberOfFloorsValue : null,
+          yearBuilt: yearBuilt || null,
+          name: validator.escape(name),
+          type: type || null,
+          size: size || null,
+          description: validator.escape(description),
+          features: features ? features.map(f => validator.escape(f)) : [],
+          totalBedrooms: totalBedrooms || null,
+          totalBathrooms: totalBathrooms || null,
+          parkingSpaces: parkingSpaces || null,
+          amenities: amenities ? amenities.map(a => validator.escape(a)) : [],
+          utilities: utilities || null,
+          maintenanceCost: maintenanceCost || null,
+          managementCompany: managementCompany || null,
+          constructionMaterial: constructionMaterial || null,
+          architect: architect || null,
+          uses: uses || null,
+          yearUpgraded: yearUpgraded || null,
+          landId: finalLandId,
+          customId: customId,
+        },
+        include: {
+          land: {
+            include: {
+              location: true, // Include location details of the associated land
+            },
+          },
         },
       });
 
-      // Set finalLandId to the newly created land's id
-      finalLandId = newLand.id;
-    }
-
-    // Create the building using finalLandId
-    const newBuilding = await prisma.building.create({
-      data: {
-        numberOfFloors,
-        yearBuilt: yearBuilt || null,
-        name,
-        type: type || null,
-        size: size || null,
-        description,
-        features: features || [],
-        totalBedrooms: totalBedrooms || null,
-        totalBathrooms: totalBathrooms || null,
-        parkingSpaces: parkingSpaces || null,
-        amenities: amenities || [],
-        utilities: utilities || null,
-        maintenanceCost: maintenanceCost || null,
-        managementCompany: managementCompany || null,
-        constructionMaterial: constructionMaterial || null,
-        architect: architect || null,
-        uses: uses || null,
-        yearUpgraded: yearUpgraded || null,
-        landId: finalLandId,
-      },
-      include: {
-        land: {
-          include: {
-            location: true, // Include location details of the associated land
-          },
-        },
-      },
+      return { newBuilding, landExists };
     });
 
-    res.status(201).json(newBuilding);
+    res.status(201).json({
+      message: result.landExists
+        ? "Building added successfully. The land already existed."
+        : "Building added successfully. New land was created.",
+      data: result.newBuilding,
+    });
   } catch (error) {
-    console.error("Error adding building:", error);
-    res.status(500).json({ message: "Failed to add building" });
+    logger.error("Error adding building:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to add building: " + error.message });
   }
 };
 export const updateBuilding = async (req, res) => {
