@@ -183,7 +183,7 @@ model Building {
   architect            String?
   uses                 String?
   yearUpgraded         Int?
-  landId               String    @unique @db.ObjectId
+  landId               String    @db.ObjectId
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   land                 Land      @relation(fields: [landId], references: [id])

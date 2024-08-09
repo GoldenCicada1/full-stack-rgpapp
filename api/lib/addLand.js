@@ -4,11 +4,11 @@ import logger from "../lib/logger.js"; // Import the logger
 import { generateSequentialId } from "../lib/idGenerator.js"; // Import the ID generator function
 import { processLocationData } from "../lib/addLocation.js"; // Adjust the import path as needed
 
-export const processLandData = async (landData) => {
+export const processLandData = async (landData, tx) => {
   console.log("Land Data:", landData);
 
-  if (!landData.locationData) {
-    throw new Error("Missing locationData in landData");
+  if (!landData) {
+    throw new Error("Missing landData");
   }
   console.log("Location Data:", landData.locationData);
 
@@ -17,7 +17,7 @@ export const processLandData = async (landData) => {
 
   try {
     const {
-      landId, // Provided land ID (custom ID)
+      customId, // Provided land ID (custom ID)
       landName,
       landSize,
       landDescription,
@@ -32,56 +32,72 @@ export const processLandData = async (landData) => {
       locationData,
     } = landData;
 
-    // Sanitize input fields
-    const sanitizedLandName = validator.escape(landName);
-    const sanitizedLandSize = Number(landSize); // Convert to number directly
-    const sanitizedLandDescription = validator.escape(landDescription);
-    const sanitizedLandFeatures = Array.isArray(landFeatures)
-      ? landFeatures.map((f) => validator.escape(f))
-      : [];
-    const sanitizedLandZoning = validator.escape(landZoning || "");
-    const sanitizedLandSoilStructure = validator.escape(
-      landSoilStructure || ""
-    );
-    const sanitizedLandTopography = validator.escape(landTopography || "");
-    const sanitizedLandPostalZipCode = validator.escape(
-      landPostalZipCode || ""
-    );
-    const sanitizedLandAccessibility = validator.escape(
-      landAccessibility || ""
-    );
-
-    // Ensure required fields are provided
-    if (
-      !sanitizedLandName ||
-      !sanitizedLandSize ||
-      !sanitizedLandDescription ||
-      !locationData
-    ) {
-      throw new Error(
-        "name, size, description, and locationData are required fields"
-      );
-    }
-
-    // Process location data
-    const { finalLocationId } = await processLocationData(locationData, prisma);
-    console.log("Final Location ID:", finalLocationId);
-
-    if (landId) {
-      const sanitizedLandId = validator.escape(landId);
-
+    // Task 1: Check If customId is provided, fetch the existing land
+    if (customId) {
+      const sanitizedCustomId = validator.escape(customId);
       const land = await prisma.land.findUnique({
-        where: { customId: sanitizedLandId },
+        where: { customId: sanitizedCustomId },
+        include: { location: true }, // Include location details
       });
 
       if (land) {
         finalLandId = land.id;
         landExists = true;
-      } else {
-        throw new Error("Land with the provided custom ID does not exist");
+
+      // If locationData is not provided, use the location from the existing land record
+      if (!locationData) {
+        if (land.location) {
+          landData.locationData = { ...land.location };
+        } else {
+          throw new Error("Location data is missing for the existing land.");
+        }
       }
     } else {
-      let land = await prisma.land.findFirst({
+      throw new Error("Land with the provided custom ID does not exist");
+      }
+    } else {
+      
+      // Task 2: Create new land if no landId provided or landId not found
+
+      // Sanitize input fields
+      const sanitizedLandName = validator.escape(landName);
+      const sanitizedLandSize = Number(landSize); // Convert to number directly
+      const sanitizedLandDescription = validator.escape(landDescription);
+      const sanitizedLandFeatures = Array.isArray(landFeatures)
+        ? landFeatures.map((f) => validator.escape(f))
+        : [];
+      const sanitizedLandZoning = validator.escape(landZoning || "");
+      const sanitizedLandSoilStructure = validator.escape(
+        landSoilStructure || ""
+      );
+      const sanitizedLandTopography = validator.escape(landTopography || "");
+      const sanitizedLandPostalZipCode = validator.escape(
+        landPostalZipCode || ""
+      );
+      const sanitizedLandAccessibility = validator.escape(
+        landAccessibility || ""
+      );
+
+      // Ensure required fields are provided
+      if (
+        !sanitizedLandName ||
+        !sanitizedLandSize ||
+        !sanitizedLandDescription ||
+        !locationData
+      ) {
+        throw new Error(
+          "name, size, description, and locationData are required fields"
+        );
+      }
+
+      // Process location data
+      const { finalLocationId } = await processLocationData(
+        locationData,
+        tx
+      );
+      console.log("Final Location ID:", finalLocationId);
+
+      let land = await tx.land.findFirst({
         where: {
           name: sanitizedLandName,
           locationId: finalLocationId,

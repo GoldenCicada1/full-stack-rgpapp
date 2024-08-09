@@ -112,10 +112,11 @@ export const addBuilding = async (req, res) => {
 
   // Validate and sanitize required fields for landData
   if (
-    !landData ||
-    !landData.landName ||
-    !landData.landSize ||
-    !landData.landDescription
+    !landData 
+    // ||
+    // !landData.landName ||
+    // !landData.landSize ||
+    // !landData.landDescription
   ) {
     return res.status(400).json({
       message:
@@ -125,9 +126,9 @@ export const addBuilding = async (req, res) => {
 
   const sanitizedLandData = {
     ...landData,
-    landName: validator.escape(landData.landName),
-    landSize: Number(landData.landSize), // Convert to number directly
-    landDescription: validator.escape(landData.landDescription),
+    landName: validator.escape(landData.landName || ""),
+    landSize: landData.landSize ? Number(landData.landSize) : null, // Convert to number directly
+    landDescription: validator.escape(landData.landDescription || ""),
     landFeatures: Array.isArray(landData.landFeatures)
       ? landData.landFeatures.map((f) => validator.escape(f))
       : [],
@@ -163,12 +164,11 @@ export const addBuilding = async (req, res) => {
       const numberOfFloorsValue = typeof numberOfFloors === 'string'
         ? parseInt(numberOfFloors, 10)
         : numberOfFloors;
-        
+
 
       // Create the building using finalLandId and customId
       const newBuilding = await tx.building.create({
         data: {
-          // numberOfFloors: validator.toInt(numberOfFloors, 10) || null,
           numberOfFloors: Number.isInteger(numberOfFloorsValue) ? numberOfFloorsValue : null,
           yearBuilt: yearBuilt || null,
           name: validator.escape(name),
