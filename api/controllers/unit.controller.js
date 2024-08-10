@@ -481,22 +481,41 @@ export const updateUnit = async (req, res) => {
 };
 
 export const deleteUnit = async (req, res) => {
-  const unitId = req.params.id; // Extract unit ID from request parameters
+  const unitId = req.params.id; // Assuming the unit ID is passed as a route parameter
 
   try {
-    // Attempt to delete the unit by ID
-    const deletedUnit = await prisma.unit.delete({
+    let unit;
+
+    // Check if the unit ID is an Object ID or Custom ID
+    if (/^[0-9a-fA-F]{24}$/.test(unitId)) {
+      // Object ID format (MongoDB)
+      unit = await prisma.unit.findUnique({
+        where: {
+          id: unitId,
+        },
+      });
+    } else {
+      // Custom ID format
+      unit = await prisma.unit.findUnique({
+        where: {
+          customId: unitId,
+        },
+      });
+    }
+
+    if (!unit) {
+      return res.status(404).json({ message: "unit not found" });
+    }
+
+    // Delete the unit
+    await prisma.unit.delete({
       where: {
-        id: unitId,
+        id: unit.id, // Ensure deletion by Object ID
       },
     });
 
-    // If deletion is successful, respond with a success message
-    res
-      .status(200)
-      .json({ message: `Unit with ID ${unitId} has been deleted` });
+    res.status(200).json({ message: "unit deleted successfully" });
   } catch (error) {
-    // If there's an error, log it and respond with an error message
     console.error("Error deleting unit:", error);
     res.status(500).json({ message: "Failed to delete unit" });
   }
