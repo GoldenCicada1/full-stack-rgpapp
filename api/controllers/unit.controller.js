@@ -309,20 +309,14 @@ export const updateUnit = async (req, res) => {
     });
 
     // Return the updated unit data
-    res
-      .status(200)
-      .json({
-        message: "Unit updated successfully",
-        data: updatedUnit,
-      });
-
+    res.status(200).json({
+      message: "Unit updated successfully",
+      data: updatedUnit,
+    });
   } catch (error) {
     console.error("Error updating unit:", error);
     res.status(500).json({ message: "Failed to update unit" });
-
   }
-
-  
 };
 
 export const deleteUnit = async (req, res) => {

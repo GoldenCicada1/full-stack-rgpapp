@@ -337,12 +337,10 @@ export const updateBuilding = async (req, res) => {
     });
 
     // Return the updated building data
-    res
-      .status(200)
-      .json({
-        message: "Building updated successfully",
-        data: updatedBuilding,
-      });
+    res.status(200).json({
+      message: "Building updated successfully",
+      data: updatedBuilding,
+    });
   } catch (error) {
     console.error("Error updating building:", error);
     res.status(500).json({ message: "Failed to update building" });
