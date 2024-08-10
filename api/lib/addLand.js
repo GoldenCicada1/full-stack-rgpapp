@@ -8,8 +8,6 @@ export const processLandData = async (landData, tx) => {
   if (!landData) {
     throw new Error("Missing landData");
   }
-  console.log("Location Data:", landData.locationData);
- 
 
   let finalLandId;
   let landExists = false; // To indicate if the land already exists
@@ -35,16 +33,10 @@ export const processLandData = async (landData, tx) => {
     if (customId) {
       const sanitizedCustomId = validator.escape(customId);
 
-      console.log("Sanitized Custom ID:", sanitizedCustomId); // Log the sanitized custom ID
-
-
-
       const land = await tx.land.findUnique({
         where: { customId: sanitizedCustomId },
         include: { location: true }, // Include location details
       });
-
-      
 
       if (land) {
         finalLandId = land.id;
@@ -114,8 +106,6 @@ export const processLandData = async (landData, tx) => {
         // Generate a custom ID
         const customId = await generateSequentialId();
 
-        console.log("Generated Custom ID:", customId);
-
         // Create new land
         land = await tx.land.create({
           data: {
@@ -136,7 +126,7 @@ export const processLandData = async (landData, tx) => {
             locationId: finalLocationId,
           },
         });
-        console.log("land Data", landData)
+
         finalLandId = land.id;
       }
     }

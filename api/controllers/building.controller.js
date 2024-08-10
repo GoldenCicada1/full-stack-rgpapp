@@ -3,8 +3,7 @@ import prisma from "../lib/prisma.js";
 import jwt from "jsonwebtoken";
 import logger from "../lib/logger.js"; // Import the logger
 import { processLandData } from "../lib/addLand.js"; // Adjust the import path as needed
-import { generateBuildingCustomId } from '../lib/idGenerator.js'; // Adjust the import path as needed
-
+import { generateBuildingCustomId } from "../lib/idGenerator.js"; // Adjust the import path as needed
 
 // Building Management Start
 export const getBuildings = async (req, res) => {
@@ -116,7 +115,6 @@ export const addBuilding = async (req, res) => {
       message: "landData is required",
     });
   }
-  
 
   const sanitizedLandData = {
     ...landData,
@@ -153,27 +151,28 @@ export const addBuilding = async (req, res) => {
       const customId = await generateBuildingCustomId(finalLandId, tx);
       console.log("Generated customId:", customId, "Type:", typeof customId); // Debug
 
-
       // Ensure numberOfFloors is converted to number
-      const numberOfFloorsValue = typeof numberOfFloors === 'string'
-        ? parseInt(numberOfFloors, 10)
-        : numberOfFloors;
-
+      const numberOfFloorsValue =
+        typeof numberOfFloors === "string"
+          ? parseInt(numberOfFloors, 10)
+          : numberOfFloors;
 
       // Create the building using finalLandId and customId
       const newBuilding = await tx.building.create({
         data: {
-          numberOfFloors: Number.isInteger(numberOfFloorsValue) ? numberOfFloorsValue : null,
+          numberOfFloors: Number.isInteger(numberOfFloorsValue)
+            ? numberOfFloorsValue
+            : null,
           yearBuilt: yearBuilt || null,
           name: validator.escape(name),
           type: type || null,
           size: size || null,
           description: validator.escape(description),
-          features: features ? features.map(f => validator.escape(f)) : [],
+          features: features ? features.map((f) => validator.escape(f)) : [],
           totalBedrooms: totalBedrooms || null,
           totalBathrooms: totalBathrooms || null,
           parkingSpaces: parkingSpaces || null,
-          amenities: amenities ? amenities.map(a => validator.escape(a)) : [],
+          amenities: amenities ? amenities.map((a) => validator.escape(a)) : [],
           utilities: utilities || null,
           maintenanceCost: maintenanceCost || null,
           managementCompany: managementCompany || null,
@@ -233,8 +232,6 @@ export const updateBuilding = async (req, res) => {
     locationData,
     landData,
   } = req.body;
-
-  console.log("req.body", req.body); // Debugging: Log the request body to see what's being sent
 
   // Validate required fields for building update
   if (
