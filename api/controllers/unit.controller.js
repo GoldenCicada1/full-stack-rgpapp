@@ -594,54 +594,70 @@ export const hardDeleteUnits = async (req, res) => {
       const isCustomId = !/^[0-9a-fA-F]{24}$/.test(id); // Simple check for Object ID format
 
       // Find the building by either custom ID or Object ID
-      const building = isCustomId
-        ? await tx.building.findUnique({
+      const unit = isCustomId
+        ? await tx.unit.findUnique({
             where: { customId: id },
             include: {
-              land: {
-                include: {
-                  location: true, // Include the location details
-                },
-              },
-            },
-          })
-        : await tx.building.findUnique({
-            where: { id: id },
+          building: {
             include: {
               land: {
                 include: {
-                  location: true, // Include the location details
+                  location: true, // Include location details of the associated land
                 },
               },
             },
+          },
+        },
+          })
+        : await tx.unit.findUnique({
+            where: { id: id },
+            include: {
+          building: {
+            include: {
+              land: {
+                include: {
+                  location: true, // Include location details of the associated land
+                },
+              },
+            },
+          },
+        },
           });
 
-      // Check if the building exists
-      if (!building) {
-        return res.status(404).json({ message: "Building not found" });
+      // Check if the unit exists
+      if (!unit) {
+        return res.status(404).json({ message: "unit not found" });
       }
 
-      // Get the land ID and location ID
-      const landId = building.land.id;
-      const locationId = building.land.location?.id;
+      // Get the buildingId, land ID and location ID
+      const buildingId = unit.building.id;
+      const landId = unit.building.land.id;
+      const locationId = unit.building.land.location?.id;
 
       // Find all buildings associated with the same land
-      const buildingsToDelete = await tx.building.findMany({
-        where: { landId: landId },
+      const unitsToDelete = await tx.unit.findMany({
+        where: { buildingId: buildingId },
       });
 
-      if (buildingsToDelete.length === 0) {
+      if (unitsToDelete.length === 0) {
         return res
           .status(404)
-          .json({ message: "No buildings found for the land" });
+          .json({ message: "No units found for the land" });
       }
 
-      // Delete all buildings associated with the land
-      await tx.building.deleteMany({
-        where: { landId: landId },
+    
+
+      // Delete all units associated with the land
+      await tx.unit.deleteMany({
+        where: { buildingId: buildingId },
       });
 
-      // Delete the land if it has no other buildings associated
+      // Delete the BUilding if it has no other units associated
+      await tx.building.delete({
+        where: {id: buildingId}
+      });
+
+      // Delete the land if it has no other units associated
       await tx.land.delete({
         where: { id: landId },
       });
@@ -655,13 +671,13 @@ export const hardDeleteUnits = async (req, res) => {
 
       res
         .status(200)
-        .json({ message: "Building and associated data deleted successfully" });
+        .json({ message: "unit and associated data deleted successfully" });
     });
   } catch (error) {
-    console.error("Error deleting building and associated data:", error);
+    console.error("Error deleting unit and associated data:", error);
     res
       .status(500)
-      .json({ message: "Failed to delete building and associated data" });
+      .json({ message: "Failed to delete unit and associated data" });
   }
 };
 // Unit Management End
