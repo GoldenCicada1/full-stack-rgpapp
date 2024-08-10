@@ -244,8 +244,7 @@ export const addBuilding = async (req, res) => {
 };
 
 export const updateBuilding = async (req, res) => {
-  const buildingId = req.params.id; // Assuming the building ID is passed as a route parameter
-
+  const id = req.params.id; // ID passed as a route parameter
   const {
     numberOfFloors,
     yearBuilt,
@@ -253,8 +252,9 @@ export const updateBuilding = async (req, res) => {
     type,
     size,
     description,
-    totalBathrooms,
+    features,
     totalBedrooms,
+    totalBathrooms,
     parkingSpaces,
     amenities,
     utilities,
@@ -264,174 +264,85 @@ export const updateBuilding = async (req, res) => {
     architect,
     uses,
     yearUpgraded,
-    locationData,
-    landData,
   } = req.body;
 
-  // Validate required fields for building update
-  if (
-    !numberOfFloors ||
-    !name ||
-    !size ||
-    !description ||
-    !locationData ||
-    !landData
-  ) {
-    return res.status(400).json({
-      message:
-        "numberOfFloors, name, size, description, locationData, and landData are required fields",
-    });
-  }
-
   try {
-    // Validate required fields for location
-    const {
-      country,
-      stateRegion,
-      districtCounty,
-      ward,
-      streetVillage,
-      latitude,
-      longitude,
-    } = locationData;
-
-    if (!country || !latitude || !longitude) {
-      return res.status(400).json({
-        message: "Location data must include country, latitude, and longitude",
-      });
+    // Validate and sanitize input data
+    if (!id || typeof id !== "string") {
+      return res.status(400).json({ message: "Invalid ID" });
     }
 
-    // Fetch existing building
-    const existingBuilding = await prisma.building.findUnique({
-      where: { id: buildingId },
-      include: {
-        land: {
-          include: {
-            location: true,
-          },
-        },
-      },
-    });
+    const isCustomId = !/^[0-9a-fA-F]{24}$/.test(id); // Check if the ID is a custom ID
 
-    if (!existingBuilding) {
+    // Find the building by either custom ID or Object ID
+    const building = isCustomId
+      ? await prisma.building.findUnique({ where: { customId: id } })
+      : await prisma.building.findUnique({ where: { id: id } });
+
+    if (!building) {
       return res.status(404).json({ message: "Building not found" });
     }
 
-    const existingLand = existingBuilding.land;
-    const existingLocation = existingLand.location;
+    // Prepare the data for update
+    const updatedData = {
+      numberOfFloors:
+        numberOfFloors !== undefined
+          ? Number(numberOfFloors)
+          : building.numberOfFloors,
+      yearBuilt: yearBuilt !== undefined ? yearBuilt : building.yearBuilt,
+      name: name !== undefined ? validator.escape(name) : building.name,
+      type: type !== undefined ? type : building.type,
+      size: size !== undefined ? size : building.size,
+      description:
+        description !== undefined
+          ? validator.escape(description)
+          : building.description,
+      features:
+        features !== undefined
+          ? features.map((f) => validator.escape(f))
+          : building.features,
+      totalBedrooms:
+        totalBedrooms !== undefined ? totalBedrooms : building.totalBedrooms,
+      totalBathrooms:
+        totalBathrooms !== undefined ? totalBathrooms : building.totalBathrooms,
+      parkingSpaces:
+        parkingSpaces !== undefined ? parkingSpaces : building.parkingSpaces,
+      amenities:
+        amenities !== undefined
+          ? amenities.map((a) => validator.escape(a))
+          : building.amenities,
+      utilities: utilities !== undefined ? utilities : building.utilities,
+      maintenanceCost:
+        maintenanceCost !== undefined
+          ? maintenanceCost
+          : building.maintenanceCost,
+      managementCompany:
+        managementCompany !== undefined
+          ? managementCompany
+          : building.managementCompany,
+      constructionMaterial:
+        constructionMaterial !== undefined
+          ? constructionMaterial
+          : building.constructionMaterial,
+      architect: architect !== undefined ? architect : building.architect,
+      uses: uses !== undefined ? uses : building.uses,
+      yearUpgraded:
+        yearUpgraded !== undefined ? yearUpgraded : building.yearUpgraded,
+    };
 
-    // Check for changes in the location data
-    const updatedLocationData = {};
-    if (country !== existingLocation.country)
-      updatedLocationData.country = country;
-    if (stateRegion !== existingLocation.stateRegion)
-      updatedLocationData.stateRegion = stateRegion;
-    if (districtCounty !== existingLocation.districtCounty)
-      updatedLocationData.districtCounty = districtCounty;
-    if (ward !== existingLocation.ward) updatedLocationData.ward = ward;
-    if (streetVillage !== existingLocation.streetVillage)
-      updatedLocationData.streetVillage = streetVillage;
-    if (latitude !== existingLocation.latitude)
-      updatedLocationData.latitude = latitude;
-    if (longitude !== existingLocation.longitude)
-      updatedLocationData.longitude = longitude;
+    // Update the building record in the database
+    const updatedBuilding = await prisma.building.update({
+      where: isCustomId ? { customId: id } : { id: id },
+      data: updatedData,
+    });
 
-    // Update the location if there are changes
-    if (Object.keys(updatedLocationData).length > 0) {
-      updatedLocationData.updatedAt = new Date();
-      await prisma.location.update({
-        where: { id: existingLocation.id },
-        data: updatedLocationData,
+    // Return the updated building data
+    res
+      .status(200)
+      .json({
+        message: "Building updated successfully",
+        data: updatedBuilding,
       });
-    }
-
-    // Check for changes in the land data
-    const updatedLandData = {};
-    if (landData.landName !== existingLand.name)
-      updatedLandData.name = landData.landName;
-    if (landData.landSize !== existingLand.size)
-      updatedLandData.size = landData.landSize;
-    if (landData.landDescription !== existingLand.description)
-      updatedLandData.description = landData.landDescription;
-    if (landData.landFeatures !== existingLand.features)
-      updatedLandData.features = landData.landFeatures;
-    if (landData.landZoning !== existingLand.zoning)
-      updatedLandData.zoning = landData.landZoning;
-    if (landData.landSoilStructure !== existingLand.soilStructure)
-      updatedLandData.soilStructure = landData.landSoilStructure;
-    if (landData.landTopography !== existingLand.topography)
-      updatedLandData.topography = landData.landTopography;
-    if (landData.landPostalZipCode !== existingLand.postalZipCode)
-      updatedLandData.postalZipCode = landData.landPostalZipCode;
-    if (landData.landAccessibility !== existingLand.accessibility)
-      updatedLandData.accessibility = landData.landAccessibility;
-
-    // Add updatedAt timestamp if there are changes
-    if (Object.keys(updatedLandData).length > 0) {
-      updatedLandData.updatedAt = new Date();
-      await prisma.land.update({
-        where: { id: existingLand.id },
-        data: updatedLandData,
-      });
-    }
-
-    // Check for changes in the building data
-    const updatedBuildingData = {};
-    if (numberOfFloors !== existingBuilding.numberOfFloors)
-      updatedBuildingData.numberOfFloors = numberOfFloors;
-    if (yearBuilt !== existingBuilding.yearBuilt)
-      updatedBuildingData.yearBuilt = yearBuilt;
-    if (name !== existingBuilding.name) updatedBuildingData.name = name;
-    if (type !== existingBuilding.type) updatedBuildingData.type = type;
-    if (size !== existingBuilding.size) updatedBuildingData.size = size;
-    if (description !== existingBuilding.description)
-      updatedBuildingData.description = description;
-    if (totalBathrooms !== existingBuilding.totalBathrooms)
-      updatedBuildingData.totalBathrooms = totalBathrooms;
-    if (totalBedrooms !== existingBuilding.totalBedrooms)
-      updatedBuildingData.totalBedrooms = totalBedrooms;
-    if (parkingSpaces !== existingBuilding.parkingSpaces)
-      updatedBuildingData.parkingSpaces = parkingSpaces;
-    if (amenities !== existingBuilding.amenities)
-      updatedBuildingData.amenities = amenities;
-    if (utilities !== existingBuilding.utilities)
-      updatedBuildingData.utilities = utilities;
-    if (maintenanceCost !== existingBuilding.maintenanceCost)
-      updatedBuildingData.maintenanceCost = maintenanceCost;
-    if (managementCompany !== existingBuilding.managementCompany)
-      updatedBuildingData.managementCompany = managementCompany;
-    if (constructionMaterial !== existingBuilding.constructionMaterial)
-      updatedBuildingData.constructionMaterial = constructionMaterial;
-    if (architect !== existingBuilding.architect)
-      updatedBuildingData.architect = architect;
-    if (uses !== existingBuilding.uses) updatedBuildingData.uses = uses;
-    if (yearUpgraded !== existingBuilding.yearUpgraded)
-      updatedBuildingData.yearUpgraded = yearUpgraded;
-
-    // Add updatedAt timestamp if there are changes
-    if (Object.keys(updatedBuildingData).length > 0) {
-      updatedBuildingData.updatedAt = new Date();
-    }
-
-    // Update the building if there are changes
-    let updatedBuilding;
-    if (Object.keys(updatedBuildingData).length > 0) {
-      updatedBuilding = await prisma.building.update({
-        where: { id: buildingId },
-        data: updatedBuildingData,
-        include: {
-          land: {
-            include: {
-              location: true, // Include location details of the associated land
-            },
-          },
-        },
-      });
-    } else {
-      updatedBuilding = existingBuilding;
-    }
-
-    res.status(200).json(updatedBuilding);
   } catch (error) {
     console.error("Error updating building:", error);
     res.status(500).json({ message: "Failed to update building" });
@@ -483,7 +394,9 @@ export const deleteMultipleBuildings = async (req, res) => {
   const ids = req.body.ids; // Array of IDs passed in the request body
 
   if (!Array.isArray(ids) || ids.length === 0) {
-    return res.status(400).json({ message: "IDs are required and should be an array." });
+    return res
+      .status(400)
+      .json({ message: "IDs are required and should be an array." });
   }
 
   try {
@@ -495,7 +408,7 @@ export const deleteMultipleBuildings = async (req, res) => {
     const customIds = [];
 
     // Separate IDs into Object IDs and Custom IDs
-    ids.forEach(id => {
+    ids.forEach((id) => {
       if (isObjectId(id)) {
         objectIds.push(id);
       } else {
@@ -523,7 +436,9 @@ export const deleteMultipleBuildings = async (req, res) => {
           select: { id: true }, // Retrieve Object IDs to delete
         });
 
-        const buildingIdsToDelete = buildingsToDelete.map(building => building.id);
+        const buildingIdsToDelete = buildingsToDelete.map(
+          (building) => building.id
+        );
 
         if (buildingIdsToDelete.length > 0) {
           await tx.building.deleteMany({
@@ -589,7 +504,9 @@ export const hardDeleteBuildings = async (req, res) => {
       });
 
       if (buildingsToDelete.length === 0) {
-        return res.status(404).json({ message: "No buildings found for the land" });
+        return res
+          .status(404)
+          .json({ message: "No buildings found for the land" });
       }
 
       // Delete all buildings associated with the land
@@ -609,11 +526,105 @@ export const hardDeleteBuildings = async (req, res) => {
         });
       }
 
-      res.status(200).json({ message: "Building and associated data deleted successfully" });
+      res
+        .status(200)
+        .json({ message: "Building and associated data deleted successfully" });
     });
   } catch (error) {
     console.error("Error deleting building and associated data:", error);
-    res.status(500).json({ message: "Failed to delete building and associated data" });
+    res
+      .status(500)
+      .json({ message: "Failed to delete building and associated data" });
   }
 };
+
+// export const bulkUpdateBuildings = async (req, res) => {
+//   const { criteria, updates } = req.body;
+
+//   // Validate the input data
+//   if (!criteria || !updates) {
+//     return res
+//       .status(400)
+//       .json({ message: "Criteria and updates are required" });
+//   }
+
+//   try {
+//     // Find buildings based on criteria
+//     const buildingsToUpdate = await prisma.building.findMany({
+//       where: criteria,
+//     });
+
+//     if (buildingsToUpdate.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ message: "No buildings found matching the criteria" });
+//     }
+
+//     // Perform the bulk update
+//     const updatedBuildings = await prisma.building.updateMany({
+//       where: criteria,
+//       data: updates,
+//     });
+
+//     res.status(200).json({
+//       message: `${updatedBuildings.count} buildings updated successfully`,
+//       updatedCount: updatedBuildings.count,
+//     });
+//   } catch (error) {
+//     console.error("Error updating buildings:", error);
+//     res.status(500).json({ message: "Failed to update buildings" });
+//   }
+// };
+
+// export const bulkUpdateBuildingsByLandId = async (req, res) => {
+//   const { landCustomId, updateData } = req.body;
+
+//   // Validate input data
+//   if (!landCustomId || !updateData) {
+//     return res
+//       .status(400)
+//       .json({ message: "Land custom ID and update data are required" });
+//   }
+
+//   try {
+//     // Find the land record with the given custom ID
+//     const land = await prisma.land.findUnique({
+//       where: { customId: landCustomId },
+//       select: { id: true },
+//     });
+
+//     if (!land) {
+//       console.error("Land with custom ID not found:", landCustomId);
+//       return res
+//         .status(404)
+//         .json({ message: "Land with the given custom ID not found" });
+//     }
+
+//     // Find buildings associated with the land ID
+//     const buildingsToUpdate = await prisma.building.findMany({
+//       where: { landId: land.id },
+//     });
+
+//     if (buildingsToUpdate.length === 0) {
+//       console.error("No buildings found for land ID:", land.id);
+//       return res
+//         .status(404)
+//         .json({ message: "No buildings found for the given land ID" });
+//     }
+
+//     // Perform the bulk update
+//     const updatedBuildings = await prisma.building.updateMany({
+//       where: { landId: land.id },
+//       data: updateData,
+//     });
+
+//     res.status(200).json({
+//       message: `${updatedBuildings.count} buildings updated successfully`,
+//       updatedCount: updatedBuildings.count,
+//     });
+//   } catch (error) {
+//     console.error("Error updating buildings:", error);
+//     res.status(500).json({ message: "Failed to update buildings" });
+//   }
+// };
 // Building Management End
