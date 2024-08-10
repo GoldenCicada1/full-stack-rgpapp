@@ -478,4 +478,142 @@ export const deleteBuilding = async (req, res) => {
     res.status(500).json({ message: "Failed to delete building" });
   }
 };
+
+export const deleteMultipleBuildings = async (req, res) => {
+  const ids = req.body.ids; // Array of IDs passed in the request body
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ message: "IDs are required and should be an array." });
+  }
+
+  try {
+    // Helper function to determine if an ID is an Object ID
+    const isObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+
+    // Create arrays to store Object IDs and Custom IDs
+    const objectIds = [];
+    const customIds = [];
+
+    // Separate IDs into Object IDs and Custom IDs
+    ids.forEach(id => {
+      if (isObjectId(id)) {
+        objectIds.push(id);
+      } else {
+        customIds.push(id);
+      }
+    });
+
+    // Start a transaction to handle multiple deletions
+    await prisma.$transaction(async (tx) => {
+      // Delete buildings by Object ID
+      if (objectIds.length > 0) {
+        await tx.building.deleteMany({
+          where: {
+            id: { in: objectIds },
+          },
+        });
+      }
+
+      // Delete buildings by Custom ID
+      if (customIds.length > 0) {
+        const buildingsToDelete = await tx.building.findMany({
+          where: {
+            customId: { in: customIds },
+          },
+          select: { id: true }, // Retrieve Object IDs to delete
+        });
+
+        const buildingIdsToDelete = buildingsToDelete.map(building => building.id);
+
+        if (buildingIdsToDelete.length > 0) {
+          await tx.building.deleteMany({
+            where: {
+              id: { in: buildingIdsToDelete },
+            },
+          });
+        }
+      }
+    });
+
+    res.status(200).json({ message: "Buildings deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting buildings:", error);
+    res.status(500).json({ message: "Failed to delete buildings" });
+  }
+};
+
+export const hardDeleteBuildings = async (req, res) => {
+  const id = req.params.id; // ID passed as a route parameter
+
+  try {
+    // Start a transaction to ensure atomicity
+    await prisma.$transaction(async (tx) => {
+      // Determine if the ID is a custom ID or Object ID
+      const isCustomId = !/^[0-9a-fA-F]{24}$/.test(id); // Simple check for Object ID format
+
+      // Find the building by either custom ID or Object ID
+      const building = isCustomId
+        ? await tx.building.findUnique({
+            where: { customId: id },
+            include: {
+              land: {
+                include: {
+                  location: true, // Include the location details
+                },
+              },
+            },
+          })
+        : await tx.building.findUnique({
+            where: { id: id },
+            include: {
+              land: {
+                include: {
+                  location: true, // Include the location details
+                },
+              },
+            },
+          });
+
+      // Check if the building exists
+      if (!building) {
+        return res.status(404).json({ message: "Building not found" });
+      }
+
+      // Get the land ID and location ID
+      const landId = building.land.id;
+      const locationId = building.land.location?.id;
+
+      // Find all buildings associated with the same land
+      const buildingsToDelete = await tx.building.findMany({
+        where: { landId: landId },
+      });
+
+      if (buildingsToDelete.length === 0) {
+        return res.status(404).json({ message: "No buildings found for the land" });
+      }
+
+      // Delete all buildings associated with the land
+      await tx.building.deleteMany({
+        where: { landId: landId },
+      });
+
+      // Delete the land if it has no other buildings associated
+      await tx.land.delete({
+        where: { id: landId },
+      });
+
+      // Delete the location if it exists and is no longer associated with any land
+      if (locationId) {
+        await tx.location.delete({
+          where: { id: locationId },
+        });
+      }
+
+      res.status(200).json({ message: "Building and associated data deleted successfully" });
+    });
+  } catch (error) {
+    console.error("Error deleting building and associated data:", error);
+    res.status(500).json({ message: "Failed to delete building and associated data" });
+  }
+};
 // Building Management End
