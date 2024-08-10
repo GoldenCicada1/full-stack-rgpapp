@@ -64,17 +64,39 @@ export const getBuildings = async (req, res) => {
 export const getBuildingById = async (req, res) => {
   const buildingId = req.params.id; // Assuming the building ID is passed as a route parameter
 
+  if (!buildingId) {
+    return res.status(400).json({ message: "Building ID is required." });
+  }
+
   try {
-    const building = await prisma.building.findUnique({
-      where: { id: buildingId },
-      include: {
-        land: {
-          include: {
-            location: true, // Include the location details of the associated land
+    let building;
+
+    // Check if the ID is a valid Object ID (assuming Object ID format is a 24-character hex string)
+    if (/^[0-9a-fA-F]{24}$/.test(buildingId)) {
+      // Query by Object ID
+      building = await prisma.building.findUnique({
+        where: { id: buildingId },
+        include: {
+          land: {
+            include: {
+              location: true, // Include the location details of the associated land
+            },
           },
         },
-      },
-    });
+      });
+    } else {
+      // Query by Custom ID
+      building = await prisma.building.findUnique({
+        where: { customId: buildingId },
+        include: {
+          land: {
+            include: {
+              location: true, // Include the location details of the associated land
+            },
+          },
+        },
+      });
+    }
 
     if (!building) {
       return res.status(404).json({ message: "Building not found" });
@@ -83,7 +105,7 @@ export const getBuildingById = async (req, res) => {
     res.status(200).json(building);
   } catch (error) {
     console.error("Error fetching building:", error);
-    res.status(500).json({ message: "Failed to fetch building" });
+    res.status(500).json({ message: "Failed to fetch building: " + error.message });
   }
 };
 export const addBuilding = async (req, res) => {
