@@ -10,15 +10,16 @@ export const getBuildings = async (req, res) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = 'createdAt',
-    sortOrder = 'desc',
-    filter = {}
+    sortBy = "createdAt",
+    sortOrder = "desc",
+    filter = {},
   } = req.query;
 
   const pageNumber = parseInt(page, 10);
   const pageSize = parseInt(limit, 10);
-  const orderBy = sortBy in ['id', 'name', 'size', 'createdAt'] ? sortBy : 'createdAt';
-  const orderDirection = sortOrder.toLowerCase() === 'asc' ? 'asc' : 'desc';
+  const orderBy =
+    sortBy in ["id", "name", "size", "createdAt"] ? sortBy : "createdAt";
+  const orderDirection = sortOrder.toLowerCase() === "asc" ? "asc" : "desc";
 
   try {
     // Parse filter criteria (you might need to adjust this based on your schema and needs)
@@ -27,7 +28,7 @@ export const getBuildings = async (req, res) => {
     if (filter.name) {
       filters.name = {
         contains: filter.name,
-        mode: 'insensitive'
+        mode: "insensitive",
       };
     }
 
@@ -43,7 +44,7 @@ export const getBuildings = async (req, res) => {
         skip: (pageNumber - 1) * pageSize,
         take: pageSize,
         orderBy: {
-          [orderBy]: orderDirection
+          [orderBy]: orderDirection,
         },
         include: {
           land: {
@@ -52,18 +53,20 @@ export const getBuildings = async (req, res) => {
             },
           },
         },
-      })
+      }),
     ]);
 
     res.status(200).json({
       totalCount,
       totalPages: Math.ceil(totalCount / pageSize),
       currentPage: pageNumber,
-      buildings
+      buildings,
     });
   } catch (error) {
     console.error("Error fetching buildings:", error);
-    res.status(500).json({ message: "Failed to fetch buildings: " + error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch buildings: " + error.message });
   }
 };
 
@@ -111,7 +114,9 @@ export const getBuildingById = async (req, res) => {
     res.status(200).json(building);
   } catch (error) {
     console.error("Error fetching building:", error);
-    res.status(500).json({ message: "Failed to fetch building: " + error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch building: " + error.message });
   }
 };
 
@@ -437,17 +442,24 @@ export const deleteBuilding = async (req, res) => {
   const buildingId = req.params.id; // Assuming the building ID is passed as a route parameter
 
   try {
-    // Find the building to be deleted
-    const building = await prisma.building.findUnique({
-      where: { id: buildingId },
-      include: {
-        land: {
-          include: {
-            location: true, // Include the location details of the associated land
-          },
+    let building;
+
+    // Check if the building ID is an Object ID or Custom ID
+    if (/^[0-9a-fA-F]{24}$/.test(buildingId)) {
+      // Object ID format (MongoDB)
+      building = await prisma.building.findUnique({
+        where: {
+          id: buildingId,
         },
-      },
-    });
+      });
+    } else {
+      // Custom ID format
+      building = await prisma.building.findUnique({
+        where: {
+          customId: buildingId,
+        },
+      });
+    }
 
     if (!building) {
       return res.status(404).json({ message: "Building not found" });
@@ -455,33 +467,12 @@ export const deleteBuilding = async (req, res) => {
 
     // Delete the building
     await prisma.building.delete({
-      where: { id: buildingId },
+      where: {
+        id: building.id, // Ensure deletion by Object ID
+      },
     });
 
-    // Delete the associated land
-    if (building.land) {
-      await prisma.land.delete({
-        where: { id: building.land.id },
-      });
-
-      // Delete the associated location if it's no longer referenced by any other entity
-      if (building.land.location) {
-        const locationId = building.land.location.id;
-        const buildingsUsingLocation = await prisma.building.count({
-          where: { land: { locationId } },
-        });
-
-        if (buildingsUsingLocation === 0) {
-          await prisma.location.delete({
-            where: { id: locationId },
-          });
-        }
-      }
-    }
-
-    res
-      .status(200)
-      .json({ message: "Building, land, and location deleted successfully" });
+    res.status(200).json({ message: "Building deleted successfully" });
   } catch (error) {
     console.error("Error deleting building:", error);
     res.status(500).json({ message: "Failed to delete building" });
