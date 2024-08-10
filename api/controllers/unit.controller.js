@@ -126,9 +126,7 @@ export const getUnitById = async (req, res) => {
     res.status(200).json(unit);
   } catch (error) {
     console.error("Error fetching unit:", error);
-    res
-      .status(500)
-      .json({ message: "Failed to fetch unit: " + error.message });
+    res.status(500).json({ message: "Failed to fetch unit: " + error.message });
   }
 };
 
@@ -521,101 +519,149 @@ export const deleteUnit = async (req, res) => {
   }
 };
 
-export const deleteAllUnits = async (req, res) => {
-  const { unitId } = req.params;
+export const deleteMultipleUnits = async (req, res) => {
+  const ids = req.body.ids; // Array of IDs passed in the request body
 
-  if (!unitId) {
-    return res.status(400).json({ message: "Unit ID is required" });
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res
+      .status(400)
+      .json({ message: "IDs are required and should be an array." });
   }
 
   try {
-    // Find the unit to get the associated building ID
-    const unit = await prisma.unit.findUnique({
-      where: { id: unitId },
-      include: { building: true },
+    // Helper function to determine if an ID is an Object ID
+    const isObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+
+    // Create arrays to store Object IDs and Custom IDs
+    const objectIds = [];
+    const customIds = [];
+
+    // Separate IDs into Object IDs and Custom IDs
+    ids.forEach((id) => {
+      if (isObjectId(id)) {
+        objectIds.push(id);
+      } else {
+        customIds.push(id);
+      }
     });
 
-    if (!unit) {
-      return res.status(404).json({ message: "Unit not found" });
-    }
+    // Start a transaction to handle multiple deletions
+    await prisma.$transaction(async (tx) => {
+      // Delete units by Object ID
+      if (objectIds.length > 0) {
+        await tx.unit.deleteMany({
+          where: {
+            id: { in: objectIds },
+          },
+        });
+      }
 
-    const { building } = unit;
+      // Delete units by Custom ID
+      if (customIds.length > 0) {
+        const unitsToDelete = await tx.unit.findMany({
+          where: {
+            customId: { in: customIds },
+          },
+          select: { id: true }, // Retrieve Object IDs to delete
+        });
 
-    if (!building) {
-      return res
-        .status(404)
-        .json({ message: "Building not found for the unit" });
-    }
+        const unitIdsToDelete = unitsToDelete.map((unit) => unit.id);
 
-    // Find all units in the building
-    const unitsInBuilding = await prisma.unit.findMany({
-      where: { buildingId: building.id },
+        if (unitIdsToDelete.length > 0) {
+          await tx.unit.deleteMany({
+            where: {
+              id: { in: unitIdsToDelete },
+            },
+          });
+        }
+      }
     });
 
-    // Delete all units in the building
-    await prisma.unit.deleteMany({
-      where: { buildingId: building.id },
-    });
-
-    res.status(200).json({
-      message: `Deleted ${unitsInBuilding.length} units in the building`,
-    });
+    res.status(200).json({ message: "units deleted successfully" });
   } catch (error) {
-    console.error("Error deleting unit:", error);
-    res.status(500).json({ message: "Failed to delete unit" });
+    console.error("Error deleting units:", error);
+    res.status(500).json({ message: "Failed to delete units" });
   }
 };
 
-export const deleteUnitsWithRef = async (req, res) => {
-  const unitId = req.params.id; // Assuming unitId is passed as a route parameter
+export const hardDeleteUnits = async (req, res) => {
+  const id = req.params.id; // ID passed as a route parameter
 
   try {
-    // Find the unit to delete and include its associated building, land, and location
-    const unitToDelete = await prisma.unit.findUnique({
-      where: { id: unitId },
-      include: {
-        building: {
-          include: {
-            land: {
-              include: {
-                location: true,
+    // Start a transaction to ensure atomicity
+    await prisma.$transaction(async (tx) => {
+      // Determine if the ID is a custom ID or Object ID
+      const isCustomId = !/^[0-9a-fA-F]{24}$/.test(id); // Simple check for Object ID format
+
+      // Find the building by either custom ID or Object ID
+      const building = isCustomId
+        ? await tx.building.findUnique({
+            where: { customId: id },
+            include: {
+              land: {
+                include: {
+                  location: true, // Include the location details
+                },
               },
             },
-          },
-        },
-      },
-    });
-
-    if (!unitToDelete) {
-      return res.status(404).json({ message: "Unit not found" });
-    }
-
-    // Delete the unit and its associated building, land, and location
-    await prisma.unit.delete({
-      where: { id: unitId },
-      include: {
-        building: {
-          include: {
-            land: {
-              include: {
-                location: true,
+          })
+        : await tx.building.findUnique({
+            where: { id: id },
+            include: {
+              land: {
+                include: {
+                  location: true, // Include the location details
+                },
               },
             },
-          },
-        },
-      },
-    });
+          });
 
-    // Optionally, you can return the deleted unit if needed
-    res.status(200).json({
-      message: "Unit and associated records deleted successfully",
-      deletedUnit: unitToDelete,
+      // Check if the building exists
+      if (!building) {
+        return res.status(404).json({ message: "Building not found" });
+      }
+
+      // Get the land ID and location ID
+      const landId = building.land.id;
+      const locationId = building.land.location?.id;
+
+      // Find all buildings associated with the same land
+      const buildingsToDelete = await tx.building.findMany({
+        where: { landId: landId },
+      });
+
+      if (buildingsToDelete.length === 0) {
+        return res
+          .status(404)
+          .json({ message: "No buildings found for the land" });
+      }
+
+      // Delete all buildings associated with the land
+      await tx.building.deleteMany({
+        where: { landId: landId },
+      });
+
+      // Delete the land if it has no other buildings associated
+      await tx.land.delete({
+        where: { id: landId },
+      });
+
+      // Delete the location if it exists and is no longer associated with any land
+      if (locationId) {
+        await tx.location.delete({
+          where: { id: locationId },
+        });
+      }
+
+      res
+        .status(200)
+        .json({ message: "Building and associated data deleted successfully" });
     });
   } catch (error) {
-    console.error("Error deleting unit:", error);
+    console.error("Error deleting building and associated data:", error);
     res
       .status(500)
-      .json({ message: "Failed to delete unit and associated records" });
+      .json({ message: "Failed to delete building and associated data" });
   }
 };
 // Unit Management End

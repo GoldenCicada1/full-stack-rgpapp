@@ -7,8 +7,8 @@ import {
   addUnit,
   updateUnit,
   deleteUnit,
-  deleteAllUnits,
-  deleteUnitsWithRef
+  deleteMultipleUnits,
+  hardDeleteUnits
 } from "../controllers/unit.controller.js";
 
 const router = express.Router();
@@ -19,7 +19,7 @@ router.get("/:id", getUnitById);
 router.post("/", verifyToken, verifyAdmin, addUnit);
 router.put("/:id", verifyToken, verifyAdmin, updateUnit);
 router.delete("/:id", verifyToken, verifyAdmin, deleteUnit);
-router.delete("/", verifyToken, verifyAdmin, deleteAllUnits);
-router.delete("/deleteUnitsWithRef/:id", verifyToken, verifyAdmin, deleteUnitsWithRef);
+router.delete("/", verifyToken, verifyAdmin, deleteMultipleUnits);
+router.delete("/hard/:id", verifyToken, verifyAdmin, hardDeleteUnits);
 
 export default router;
