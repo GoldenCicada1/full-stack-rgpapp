@@ -104,3 +104,68 @@ export const generateBuildingCustomId = async (landId, tx) => {
     throw new Error(`Failed to generate custom ID: ${error.message}`);
   }
 };
+
+// Function to generate the next sequential Unit ID based on buildingId
+export const generateUnitCustomId = async (buildingId, tx) => {
+  try {
+    // Retrieve the building with the given buildingId to get its customId
+    const building = await tx.building.findUnique({
+      where: { id: buildingId },
+      select: { customId: true },
+    });
+
+    if (!building || !building.customId) {
+      throw new Error("Building not found or does not have a customId");
+    }
+
+    // Find the highest customId for units associated with this building's customId
+    const lastUnit = await tx.unit.findFirst({
+      where: {
+        customId: {
+          startsWith: building.customId,
+        },
+      },
+      orderBy: {
+        customId: "desc",
+      },
+      select: {
+        customId: true,
+      },
+    });
+
+    let nextNumber = 1; // Default to 001
+
+    if (lastUnit && lastUnit.customId) {
+      // Extract the sequential number from the last customId
+      const lastNumber = parseInt(
+        lastUnit.customId.slice(building.customId.length),
+        10
+      );
+
+      // Ensure that the parsed number is valid
+      if (isNaN(lastNumber)) {
+        throw new Error("Invalid number extracted from last customId");
+      }
+
+      nextNumber = lastNumber + 1;
+    }
+
+    if (nextNumber > 999) {
+      throw new Error("No more available custom IDs for this building.");
+    }
+
+    // Format the next number as a 3-digit string
+    const formattedNumber = nextNumber
+      .toString()
+      .padStart(sequentialNumberLength, "0");
+    // Combine building.customId with the formatted number
+    const customId = `${building.customId}${formattedNumber}`;
+
+    console.log("custom id", customId);
+
+    // Return the new custom ID
+    return customId;
+  } catch (error) {
+    throw new Error(`Failed to generate custom ID: ${error.message}`);
+  }
+};

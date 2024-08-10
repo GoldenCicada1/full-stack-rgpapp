@@ -192,21 +192,22 @@ model Building {
 }
 
 model Unit {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  bathRoom     Int?
-  bedRoom      Int?
-  numberOfUnit String
-  floorLevel   Int
-  size         Float
-  description  String?
-  amenities    String[]
-  utilities    String?
-  features     String?
-  unitType     String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  buildingId   String   @db.ObjectId
-  building     Building @relation(fields: [buildingId], references: [id])
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  customId    String   @unique
+  bathRoom    Int?
+  bedRoom     Int?
+  unitName    String
+  floorLevel  Int
+  size        Float
+  description String?
+  amenities   String[]
+  utilities   String[]
+  features    String[]
+  unitType    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  buildingId  String   @db.ObjectId
+  building    Building @relation(fields: [buildingId], references: [id])
 }
 
 model Media {
