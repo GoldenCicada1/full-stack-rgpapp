@@ -8,59 +8,65 @@ import { generateBuildingCustomId } from "../lib/idGenerator.js"; // Adjust the 
 // Building Management Start
 export const getBuildings = async (req, res) => {
   const {
-    numberOfFloors,
-    yearBuilt,
-    type,
-    size,
-    amenities,
-    constructionMaterial,
-    uses,
-    yearUpgraded,
-    country,
-    stateRegion,
-    districtCounty,
-    ward,
+    page = 1,
+    limit = 10,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+    filter = {}
   } = req.query;
 
-  try {
-    const buildings = await prisma.building.findMany({
-      where: {
-        numberOfFloors: numberOfFloors ? parseInt(numberOfFloors) : undefined,
-        yearBuilt: yearBuilt ? parseInt(yearBuilt) : undefined,
-        type: type || undefined,
-        size: size ? parseFloat(size) : undefined,
-        amenities: amenities
-          ? {
-              has: amenities.split(","),
-            }
-          : undefined,
-        constructionMaterial: constructionMaterial || undefined,
-        uses: uses || undefined,
-        yearUpgraded: yearUpgraded ? parseInt(yearUpgraded) : undefined,
-        land: {
-          location: {
-            country: country || undefined,
-            stateRegion: stateRegion || undefined,
-            districtCounty: districtCounty || undefined,
-            ward: ward || undefined,
-          },
-        },
-      },
-      include: {
-        land: {
-          include: {
-            location: true, // Include location details in the response
-          },
-        },
-      },
-    });
+  const pageNumber = parseInt(page, 10);
+  const pageSize = parseInt(limit, 10);
+  const orderBy = sortBy in ['id', 'name', 'size', 'createdAt'] ? sortBy : 'createdAt';
+  const orderDirection = sortOrder.toLowerCase() === 'asc' ? 'asc' : 'desc';
 
-    res.status(200).json(buildings);
+  try {
+    // Parse filter criteria (you might need to adjust this based on your schema and needs)
+    const filters = {};
+
+    if (filter.name) {
+      filters.name = {
+        contains: filter.name,
+        mode: 'insensitive'
+      };
+    }
+
+    if (filter.type) {
+      filters.type = filter.type;
+    }
+
+    // Retrieve buildings from the database
+    const [totalCount, buildings] = await prisma.$transaction([
+      prisma.building.count({ where: filters }),
+      prisma.building.findMany({
+        where: filters,
+        skip: (pageNumber - 1) * pageSize,
+        take: pageSize,
+        orderBy: {
+          [orderBy]: orderDirection
+        },
+        include: {
+          land: {
+            include: {
+              location: true, // Include the location details of the associated land
+            },
+          },
+        },
+      })
+    ]);
+
+    res.status(200).json({
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      currentPage: pageNumber,
+      buildings
+    });
   } catch (error) {
     console.error("Error fetching buildings:", error);
-    res.status(500).json({ message: "Failed to get buildings" });
+    res.status(500).json({ message: "Failed to fetch buildings: " + error.message });
   }
 };
+
 export const getBuildingById = async (req, res) => {
   const buildingId = req.params.id; // Assuming the building ID is passed as a route parameter
 
@@ -108,6 +114,7 @@ export const getBuildingById = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch building: " + error.message });
   }
 };
+
 export const addBuilding = async (req, res) => {
   const {
     numberOfFloors,
@@ -230,6 +237,7 @@ export const addBuilding = async (req, res) => {
       .json({ message: "Failed to add building: " + error.message });
   }
 };
+
 export const updateBuilding = async (req, res) => {
   const buildingId = req.params.id; // Assuming the building ID is passed as a route parameter
 
