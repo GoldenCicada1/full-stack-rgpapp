@@ -41,10 +41,10 @@ export const generateSequentialId = async () => {
 };
 
 // Function to generate the next sequential building ID based on landId
-export const generateBuildingCustomId = async (landId) => {
+export const generateBuildingCustomId = async (landId, tx) => {
   try {
     // Retrieve the land with the given landId to get its customId
-    const land = await prisma.land.findUnique({
+    const land = await tx.land.findUnique({
       where: { id: landId },
       select: { customId: true },
     });
@@ -54,7 +54,7 @@ export const generateBuildingCustomId = async (landId) => {
     }
 
     // Find the highest customId for buildings associated with this land's customId
-    const lastBuilding = await prisma.building.findFirst({
+    const lastBuilding = await tx.building.findFirst({
       where: {
         customId: {
           startsWith: land.customId,
@@ -96,8 +96,10 @@ export const generateBuildingCustomId = async (landId) => {
     // Combine land.customId with the formatted number
     const customId = `${land.customId}${formattedNumber}`;
 
+    console.log("custom id", customId);
+
     // Return the new custom ID
-    return `${land.customId}${formattedNumber}`;
+    return customId;
   } catch (error) {
     throw new Error(`Failed to generate custom ID: ${error.message}`);
   }

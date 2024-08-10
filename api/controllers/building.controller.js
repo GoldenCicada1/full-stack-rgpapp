@@ -111,18 +111,12 @@ export const addBuilding = async (req, res) => {
   } = req.body;
 
   // Validate and sanitize required fields for landData
-  if (
-    !landData 
-    // ||
-    // !landData.landName ||
-    // !landData.landSize ||
-    // !landData.landDescription
-  ) {
+  if (!landData) {
     return res.status(400).json({
-      message:
-        "landName, landSize, and landDescription are required fields for landData",
+      message: "landData is required",
     });
   }
+  
 
   const sanitizedLandData = {
     ...landData,
@@ -156,7 +150,7 @@ export const addBuilding = async (req, res) => {
       }
 
       // Generate the custom ID for the building
-      const customId = await generateBuildingCustomId(finalLandId);
+      const customId = await generateBuildingCustomId(finalLandId, tx);
       console.log("Generated customId:", customId, "Type:", typeof customId); // Debug
 
 

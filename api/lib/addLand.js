@@ -5,12 +5,11 @@ import { generateSequentialId } from "../lib/idGenerator.js"; // Import the ID g
 import { processLocationData } from "../lib/addLocation.js"; // Adjust the import path as needed
 
 export const processLandData = async (landData, tx) => {
-  console.log("Land Data:", landData);
-
   if (!landData) {
     throw new Error("Missing landData");
   }
   console.log("Location Data:", landData.locationData);
+ 
 
   let finalLandId;
   let landExists = false; // To indicate if the land already exists
@@ -35,28 +34,34 @@ export const processLandData = async (landData, tx) => {
     // Task 1: Check If customId is provided, fetch the existing land
     if (customId) {
       const sanitizedCustomId = validator.escape(customId);
-      const land = await prisma.land.findUnique({
+
+      console.log("Sanitized Custom ID:", sanitizedCustomId); // Log the sanitized custom ID
+
+
+
+      const land = await tx.land.findUnique({
         where: { customId: sanitizedCustomId },
         include: { location: true }, // Include location details
       });
+
+      
 
       if (land) {
         finalLandId = land.id;
         landExists = true;
 
-      // If locationData is not provided, use the location from the existing land record
-      if (!locationData) {
-        if (land.location) {
-          landData.locationData = { ...land.location };
-        } else {
-          throw new Error("Location data is missing for the existing land.");
+        // If locationData is not provided, use the location from the existing land record
+        if (!locationData) {
+          if (land.location) {
+            landData.locationData = { ...land.location };
+          } else {
+            throw new Error("Location data is missing for the existing land.");
+          }
         }
+      } else {
+        throw new Error("Land with the provided custom ID does not exist");
       }
     } else {
-      throw new Error("Land with the provided custom ID does not exist");
-      }
-    } else {
-      
       // Task 2: Create new land if no landId provided or landId not found
 
       // Sanitize input fields
@@ -91,12 +96,10 @@ export const processLandData = async (landData, tx) => {
       }
 
       // Process location data
-      const { finalLocationId } = await processLocationData(
-        locationData,
-        tx
-      );
+      const { finalLocationId } = await processLocationData(locationData, tx);
       console.log("Final Location ID:", finalLocationId);
 
+      // Check if the land already exists
       let land = await tx.land.findFirst({
         where: {
           name: sanitizedLandName,
@@ -108,10 +111,15 @@ export const processLandData = async (landData, tx) => {
         landExists = true;
         finalLandId = land.id;
       } else {
+        // Generate a custom ID
         const customId = await generateSequentialId();
 
-        land = await prisma.land.create({
+        console.log("Generated Custom ID:", customId);
+
+        // Create new land
+        land = await tx.land.create({
           data: {
+            customId,
             name: sanitizedLandName,
             size: sanitizedLandSize,
             description: sanitizedLandDescription,
@@ -126,9 +134,9 @@ export const processLandData = async (landData, tx) => {
               : null,
             accessibility: sanitizedLandAccessibility,
             locationId: finalLocationId,
-            customId: customId,
           },
         });
+        console.log("land Data", landData)
         finalLandId = land.id;
       }
     }

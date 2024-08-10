@@ -24,6 +24,7 @@ export const getLands = async (req, res) => {
       return await tx.land.findMany({
         include: {
           location: true, // Include location details
+          buildings: true, // Include associated buildings
         },
       });
     });
