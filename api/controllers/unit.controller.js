@@ -246,12 +246,12 @@ export const addUnit = async (req, res) => {
 };
 
 export const updateUnit = async (req, res) => {
-  const unitId = req.params.id; // Assuming the unit ID is passed as a route parameter
+  const id = req.params.id; // Assuming the unit ID is passed as a route parameter
 
   const {
     bathRoom,
     bedRoom,
-    numberOfUnit,
+    unitName,
     floorLevel,
     size,
     description,
@@ -259,223 +259,70 @@ export const updateUnit = async (req, res) => {
     utilities,
     features,
     unitType,
-    buildingData,
-    landData,
-    locationData,
   } = req.body;
 
-  // Validate required fields for unit update
-  if (
-    !numberOfUnit ||
-    !floorLevel ||
-    !size ||
-    !buildingData ||
-    !landData ||
-    !locationData
-  ) {
-    return res.status(400).json({
-      message:
-        "numberOfUnit, floorLevel, size, buildingData, landData, and locationData are required fields",
-    });
-  }
-
   try {
-    // Validate required fields for location
-    const {
-      country,
-      stateRegion,
-      districtCounty,
-      ward,
-      streetVillage,
-      latitude,
-      longitude,
-    } = locationData;
-
-    if (!country || !latitude || !longitude) {
-      return res.status(400).json({
-        message: "Location data must include country, latitude, and longitude",
-      });
+    // Validate and sanitize input data
+    if (!id || typeof id !== "string") {
+      return res.status(400).json({ message: "Invalid ID" });
     }
 
-    // Fetch existing unit
-    const existingUnit = await prisma.unit.findUnique({
-      where: { id: unitId },
-      include: {
-        building: {
-          include: {
-            land: {
-              include: {
-                location: true,
-              },
-            },
-          },
-        },
-      },
+    const isCustomId = !/^[0-9a-fA-F]{24}$/.test(id); // Check if the ID is a custom ID
+
+    // Find the building by either custom ID or Object ID
+    const unit = isCustomId
+      ? await prisma.unit.findUnique({ where: { customId: id } })
+      : await prisma.unit.findUnique({ where: { id: id } });
+
+    if (!unit) {
+      return res.status(404).json({ message: "unit not found" });
+    }
+
+    // Prepare the data for update
+    const updatedData = {
+      bathRoom: bathRoom !== undefined ? bathRoom : existingUnit.bathRoom,
+      bedRoom: bedRoom !== undefined ? bedRoom : existingUnit.bedRoom,
+      unitName: unitName !== undefined ? unitName : existingUnit.unitName,
+      floorLevel:
+        floorLevel !== undefined ? floorLevel : existingUnit.floorLevel,
+      size: size !== undefined ? size : existingUnit.size,
+      description:
+        description !== undefined
+          ? validator.escape(description)
+          : existingUnit.description,
+      amenities:
+        amenities !== undefined
+          ? amenities.map((a) => validator.escape(a))
+          : existingUnit.amenities,
+      utilities: utilities !== undefined ? utilities : existingUnit.utilities,
+      features:
+        features !== undefined
+          ? features.map((f) => validator.escape(f))
+          : existingUnit.features,
+      unitType: unitType !== undefined ? unitType : existingUnit.unitType,
+    };
+
+    // Update the unit record in the database
+    const updatedUnit = await prisma.unit.update({
+      where: isCustomId ? { customId: id } : { id: id },
+      data: updatedData,
     });
 
-    if (!existingUnit) {
-      return res.status(404).json({ message: "Unit not found" });
-    }
-
-    const existingBuilding = existingUnit.building;
-    const existingLand = existingBuilding.land;
-    const existingLocation = existingLand.location;
-
-    // Check for changes in the location data
-    const updatedLocationData = {};
-    if (country !== existingLocation.country)
-      updatedLocationData.country = country;
-    if (stateRegion !== existingLocation.stateRegion)
-      updatedLocationData.stateRegion = stateRegion;
-    if (districtCounty !== existingLocation.districtCounty)
-      updatedLocationData.districtCounty = districtCounty;
-    if (ward !== existingLocation.ward) updatedLocationData.ward = ward;
-    if (streetVillage !== existingLocation.streetVillage)
-      updatedLocationData.streetVillage = streetVillage;
-    if (latitude !== existingLocation.latitude)
-      updatedLocationData.latitude = latitude;
-    if (longitude !== existingLocation.longitude)
-      updatedLocationData.longitude = longitude;
-
-    // Update the location if there are changes
-    if (Object.keys(updatedLocationData).length > 0) {
-      updatedLocationData.updatedAt = new Date();
-      await prisma.location.update({
-        where: { id: existingLocation.id },
-        data: updatedLocationData,
+    // Return the updated unit data
+    res
+      .status(200)
+      .json({
+        message: "Unit updated successfully",
+        data: updatedUnit,
       });
-    }
 
-    // Check for changes in the land data
-    const updatedLandData = {};
-    if (landData.landName !== existingLand.name)
-      updatedLandData.name = landData.landName;
-    if (landData.landSize !== existingLand.size)
-      updatedLandData.size = landData.landSize;
-    if (landData.landDescription !== existingLand.description)
-      updatedLandData.description = landData.landDescription;
-    if (landData.landFeatures !== existingLand.features)
-      updatedLandData.features = landData.landFeatures;
-    if (landData.landZoning !== existingLand.zoning)
-      updatedLandData.zoning = landData.landZoning;
-    if (landData.landSoilStructure !== existingLand.soilStructure)
-      updatedLandData.soilStructure = landData.landSoilStructure;
-    if (landData.landTopography !== existingLand.topography)
-      updatedLandData.topography = landData.landTopography;
-    if (landData.landPostalZipCode !== existingLand.postalZipCode)
-      updatedLandData.postalZipCode = landData.landPostalZipCode;
-    if (landData.landAccessibility !== existingLand.accessibility)
-      updatedLandData.accessibility = landData.landAccessibility;
-
-    // Add updatedAt timestamp if there are changes
-    if (Object.keys(updatedLandData).length > 0) {
-      updatedLandData.updatedAt = new Date();
-      await prisma.land.update({
-        where: { id: existingLand.id },
-        data: updatedLandData,
-      });
-    }
-
-    // Check for changes in the building data
-    const updatedBuildingData = {};
-    if (buildingData.numberOfFloors !== existingBuilding.numberOfFloors)
-      updatedBuildingData.numberOfFloors = buildingData.numberOfFloors;
-    if (buildingData.yearBuilt !== existingBuilding.yearBuilt)
-      updatedBuildingData.yearBuilt = buildingData.yearBuilt;
-    if (buildingData.name !== existingBuilding.name)
-      updatedBuildingData.name = buildingData.name;
-    if (buildingData.type !== existingBuilding.type)
-      updatedBuildingData.type = buildingData.type;
-    if (buildingData.size !== existingBuilding.size)
-      updatedBuildingData.size = buildingData.size;
-    if (buildingData.description !== existingBuilding.description)
-      updatedBuildingData.description = buildingData.description;
-    if (buildingData.totalBathrooms !== existingBuilding.totalBathrooms)
-      updatedBuildingData.totalBathrooms = buildingData.totalBathrooms;
-    if (buildingData.totalBedrooms !== existingBuilding.totalBedrooms)
-      updatedBuildingData.totalBedrooms = buildingData.totalBedrooms;
-    if (buildingData.parkingSpaces !== existingBuilding.parkingSpaces)
-      updatedBuildingData.parkingSpaces = buildingData.parkingSpaces;
-    if (buildingData.amenities !== existingBuilding.amenities)
-      updatedBuildingData.amenities = buildingData.amenities;
-    if (buildingData.utilities !== existingBuilding.utilities)
-      updatedBuildingData.utilities = buildingData.utilities;
-    if (buildingData.maintenanceCost !== existingBuilding.maintenanceCost)
-      updatedBuildingData.maintenanceCost = buildingData.maintenanceCost;
-    if (buildingData.managementCompany !== existingBuilding.managementCompany)
-      updatedBuildingData.managementCompany = buildingData.managementCompany;
-    if (
-      buildingData.constructionMaterial !==
-      existingBuilding.constructionMaterial
-    )
-      updatedBuildingData.constructionMaterial =
-        buildingData.constructionMaterial;
-    if (buildingData.architect !== existingBuilding.architect)
-      updatedBuildingData.architect = buildingData.architect;
-    if (buildingData.uses !== existingBuilding.uses)
-      updatedBuildingData.uses = buildingData.uses;
-    if (buildingData.yearUpgraded !== existingBuilding.yearUpgraded)
-      updatedBuildingData.yearUpgraded = buildingData.yearUpgraded;
-
-    // Add updatedAt timestamp if there are changes
-    if (Object.keys(updatedBuildingData).length > 0) {
-      updatedBuildingData.updatedAt = new Date();
-      await prisma.building.update({
-        where: { id: existingBuilding.id },
-        data: updatedBuildingData,
-      });
-    }
-
-    // Check for changes in the unit data
-    const updatedUnitData = {};
-    if (bathRoom !== existingUnit.bathRoom) updatedUnitData.bathRoom = bathRoom;
-    if (bedRoom !== existingUnit.bedRoom) updatedUnitData.bedRoom = bedRoom;
-    if (numberOfUnit !== existingUnit.numberOfUnit)
-      updatedUnitData.numberOfUnit = numberOfUnit;
-    if (floorLevel !== existingUnit.floorLevel)
-      updatedUnitData.floorLevel = floorLevel;
-    if (size !== existingUnit.size) updatedUnitData.size = size;
-    if (description !== existingUnit.description)
-      updatedUnitData.description = description;
-    if (amenities !== existingUnit.amenities)
-      updatedUnitData.amenities = amenities;
-    if (utilities !== existingUnit.utilities)
-      updatedUnitData.utilities = utilities;
-    if (features !== existingUnit.features) updatedUnitData.features = features;
-    if (unitType !== existingUnit.unitType) updatedUnitData.unitType = unitType;
-
-    // Add updatedAt timestamp if there are changes
-    if (Object.keys(updatedUnitData).length > 0) {
-      updatedUnitData.updatedAt = new Date();
-    }
-
-    // Update the unit if there are changes
-    let updatedUnit;
-    if (Object.keys(updatedUnitData).length > 0) {
-      updatedUnit = await prisma.unit.update({
-        where: { id: unitId },
-        data: updatedUnitData,
-        include: {
-          building: {
-            include: {
-              land: {
-                include: {
-                  location: true, // Include location details of the associated land
-                },
-              },
-            },
-          },
-        },
-      });
-    } else {
-      updatedUnit = existingUnit;
-    }
-
-    res.status(200).json(updatedUnit);
   } catch (error) {
     console.error("Error updating unit:", error);
     res.status(500).json({ message: "Failed to update unit" });
+
   }
+
+  
 };
 
 export const deleteUnit = async (req, res) => {
@@ -598,30 +445,30 @@ export const hardDeleteUnits = async (req, res) => {
         ? await tx.unit.findUnique({
             where: { customId: id },
             include: {
-          building: {
-            include: {
-              land: {
+              building: {
                 include: {
-                  location: true, // Include location details of the associated land
+                  land: {
+                    include: {
+                      location: true, // Include location details of the associated land
+                    },
+                  },
                 },
               },
             },
-          },
-        },
           })
         : await tx.unit.findUnique({
             where: { id: id },
             include: {
-          building: {
-            include: {
-              land: {
+              building: {
                 include: {
-                  location: true, // Include location details of the associated land
+                  land: {
+                    include: {
+                      location: true, // Include location details of the associated land
+                    },
+                  },
                 },
               },
             },
-          },
-        },
           });
 
       // Check if the unit exists
@@ -640,12 +487,8 @@ export const hardDeleteUnits = async (req, res) => {
       });
 
       if (unitsToDelete.length === 0) {
-        return res
-          .status(404)
-          .json({ message: "No units found for the land" });
+        return res.status(404).json({ message: "No units found for the land" });
       }
-
-    
 
       // Delete all units associated with the land
       await tx.unit.deleteMany({
@@ -654,7 +497,7 @@ export const hardDeleteUnits = async (req, res) => {
 
       // Delete the BUilding if it has no other units associated
       await tx.building.delete({
-        where: {id: buildingId}
+        where: { id: buildingId },
       });
 
       // Delete the land if it has no other units associated
