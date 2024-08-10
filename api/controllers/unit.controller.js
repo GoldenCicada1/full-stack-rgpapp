@@ -8,31 +8,129 @@ import { generateUnitCustomId } from "../lib/idGenerator.js"; // Adjust the impo
 // Unit Management Start
 
 export const getUnits = async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = "createdAt",
+    sortOrder = "desc",
+    filter = {},
+  } = req.query;
+
+  const pageNumber = parseInt(page, 10);
+  const pageSize = parseInt(limit, 10);
+  const orderBy =
+    sortBy in ["id", "name", "size", "createdAt"] ? sortBy : "createdAt";
+  const orderDirection = sortOrder.toLowerCase() === "asc" ? "asc" : "desc";
+
   try {
-    // Fetch all units with their associated building, land, and location details
-    const units = await prisma.unit.findMany({
-      include: {
-        building: {
-          include: {
-            land: {
-              include: {
-                location: true, // Include location details of the associated land
+    // Parse filter criteria (you might need to adjust this based on your schema and needs)
+    const filters = {};
+
+    if (filter.name) {
+      filters.name = {
+        contains: filter.name,
+        mode: "insensitive",
+      };
+    }
+
+    if (filter.type) {
+      filters.type = filter.type;
+    }
+
+    // Retrieve Units from the database
+    const [totalCount, unit] = await prisma.$transaction([
+      prisma.unit.count({ where: filters }),
+      prisma.unit.findMany({
+        where: filters,
+        skip: (pageNumber - 1) * pageSize,
+        take: pageSize,
+        orderBy: {
+          [orderBy]: orderDirection,
+        },
+        include: {
+          building: {
+            include: {
+              land: {
+                include: {
+                  location: true, // Include location details of the associated land
+                },
               },
             },
           },
         },
-      },
+      }),
+    ]);
+    res.status(200).json({
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      currentPage: pageNumber,
+      unit,
     });
-
-    // Return the units as JSON response
-    res.status(200).json(units);
   } catch (error) {
     console.error("Error fetching units:", error);
-    res.status(500).json({ message: "Failed to fetch units" });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch units: " + error.message });
   }
 };
 
-export const getUnitById = async (req, res) => {};
+export const getUnitById = async (req, res) => {
+  const unitId = req.params.id; // Assuming the unit ID is passed as a route parameter
+
+  if (!unitId) {
+    return res.status(400).json({ message: "Unit ID is required." });
+  }
+
+  try {
+    let unit;
+
+    // Check if the ID is a valid Object ID (assuming Object ID format is a 24-character hex string)
+    if (/^[0-9a-fA-F]{24}$/.test(unitId)) {
+      // Query by Object ID
+      unit = await prisma.unit.findUnique({
+        where: { id: unitId },
+        include: {
+          building: {
+            include: {
+              land: {
+                include: {
+                  location: true, // Include location details of the associated land
+                },
+              },
+            },
+          },
+        },
+      });
+    } else {
+      // Query by Custom ID
+      unit = await prisma.unit.findUnique({
+        where: { customId: unitId },
+        include: {
+          building: {
+            include: {
+              land: {
+                include: {
+                  location: true, // Include location details of the associated land
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    if (!unit) {
+      return res.status(404).json({ message: "Unit not found" });
+    }
+
+    res.status(200).json(unit);
+  } catch (error) {
+    console.error("Error fetching unit:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to fetch unit: " + error.message });
+  }
+};
 
 export const addUnit = async (req, res) => {
   const {
