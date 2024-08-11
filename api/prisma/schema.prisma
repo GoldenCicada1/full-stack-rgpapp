@@ -106,6 +106,17 @@ model User {
   chatIDs    String[]    @db.ObjectId
 }
 
+model Admin {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  username  String   @unique
+  password  String
+  isActive  Boolean  @default(true)
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Chat {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
   users       User[]    @relation(fields: [userIDs], references: [id])
