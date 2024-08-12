@@ -1,10 +1,35 @@
 <script setup>
 import FloatingConfigurator from '@/components/FloatingConfigurator.vue';
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { login } from '@/service/authService';
 
 const username = ref('');
 const password = ref('');
 const checked = ref(false);
+const errorMessage = ref('');
+
+const router = useRouter();
+
+const handleLogin = async () => {
+    try {
+        // Call the login function and get the full response
+        const response = await login(username.value, password.value);
+
+        // Check if the token is present in the response
+        const { token } = response.data;
+
+        if (token) {
+            // Store token in local storage
+            localStorage.setItem('authToken', token);
+            router.push({ name: 'dashboard' }); // Redirect to dashboard or desired route
+        } else {
+            errorMessage.value = 'Login failed: No token received';
+        }
+    } catch (error) {
+        errorMessage.value = error.message || 'Login failed';
+    }
+};
 </script>
 
 <template>
@@ -32,12 +57,13 @@ const checked = ref(false);
 
                         <div class="flex items-center justify-between mt-2 mb-8 gap-8">
                             <div class="flex items-center">
-                                <Checkbox v-model="checked" id="rememberme1" binary class="mr-2"></Checkbox>
-                                <label for="rememberme1">Remember me</label>
+                                <Checkbox v-model="checked" id="rememberme" binary class="mr-2"></Checkbox>
+                                <label for="rememberme">Remember me</label>
                             </div>
                             <span class="font-medium no-underline ml-2 text-right cursor-pointer text-primary">Forgot password?</span>
                         </div>
-                        <Button label="Sign In" class="w-full" as="router-link" to="/"></Button>
+                        <Button label="Sign In" class="w-full" @click="handleLogin"></Button>
+                        <p v-if="errorMessage" class="text-red-500 mt-4">{{ errorMessage }}</p>
                     </div>
                 </div>
             </div>

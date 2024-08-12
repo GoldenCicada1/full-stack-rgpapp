@@ -1,15 +1,12 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8800/api/admin/auth';
+const API_URL = 'http://localhost:8800/api/admin/auth/';
 
 // Login function to authenticate and store token
 export const login = async (username, password) => {
     try {
         const response = await axios.post(`${API_URL}/login`, { username, password }, { withCredentials: true });
-        if (response.data.token) {
-            localStorage.setItem('authToken', response.data.token); // Store token in local storage
-        }
-        return response.data;
+        return response; // Return the full response object
     } catch (error) {
         console.error('Login error:', error);
         throw new Error(error.response?.data?.message || 'Login failed');
