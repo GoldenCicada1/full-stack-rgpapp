@@ -2,12 +2,99 @@
 import { ref } from 'vue';
 
 import AppMenuItem from './AppMenuItem.vue';
+import { logout } from '@/service/authService';
 
 const model = ref([
     {
         label: 'Home',
         items: [{ label: 'Dashboard', icon: 'pi pi-fw pi-home', to: '/' }]
     },
+
+    {
+        label: 'Product Management',
+        icon: 'pi pi-fw pi-box',
+        items: [
+            {
+                label: 'Product List',
+                icon: 'pi pi-fw pi-list',
+                to: '/product-management/list',
+                items: [
+                    {
+                        label: 'Search',
+                        icon: 'pi pi-fw pi-search',
+                        to: '/product-management/search'
+                    },
+                    {
+                        label: 'Filter',
+                        icon: 'pi pi-fw pi-filter',
+                        to: '/product-management/filter'
+                    },
+                    {
+                        label: 'Sort',
+                        icon: 'pi pi-fw pi-sort',
+                        to: '/product-management/sort'
+                    }
+                ]
+            },
+            {
+                label: 'Add New Product',
+                icon: 'pi pi-fw pi-plus',
+                to: '/new',
+                items: [
+                    {
+                        label: 'Unit',
+                        icon: 'pi pi-fw pi-home',
+                        to: '/new/unit'
+                    },
+                    {
+                        label: 'Building',
+                        icon: 'pi pi-fw pi-building',
+                        to: '/new/building'
+                    },
+                    {
+                        label: 'Land Plot',
+                        icon: 'pi pi-fw pi-map',
+                        to: '/new/land'
+                    }
+                ]
+            },
+            {
+                label: 'Edit Product',
+                icon: 'pi pi-fw pi-pencil',
+                to: '/product-management/edit',
+                items: [
+                    {
+                        label: 'Unit',
+                        icon: 'pi pi-fw pi-building',
+                        to: '/product-management/edit/unit'
+                    },
+                    {
+                        label: 'Building',
+                        icon: 'pi pi-fw pi-building',
+                        to: '/product-management/edit/building'
+                    },
+                    {
+                        label: 'Land Plot',
+                        icon: 'pi pi-fw pi-map',
+                        to: '/product-management/edit/land'
+                    }
+                ]
+            },
+            {
+                label: 'Delete Product',
+                icon: 'pi pi-fw pi-trash',
+                to: '/product-management/delete',
+                items: [
+                    {
+                        label: 'Confirm Deletion',
+                        icon: 'pi pi-fw pi-check-circle',
+                        to: '/product-management/delete/confirm'
+                    }
+                ]
+            }
+        ]
+    },
+
     {
         label: 'UI Components',
         items: [
@@ -33,11 +120,11 @@ const model = ref([
         icon: 'pi pi-fw pi-briefcase',
         to: '/pages',
         items: [
-            {
-                label: 'Landing',
-                icon: 'pi pi-fw pi-globe',
-                to: '/landing'
-            },
+            // {
+            //     label: 'Landing',
+            //     icon: 'pi pi-fw pi-globe',
+            //     to: '/landing'
+            // },
             {
                 label: 'Auth',
                 icon: 'pi pi-fw pi-user',
@@ -123,16 +210,18 @@ const model = ref([
     {
         label: 'Get Started',
         items: [
+            // {
+            //     label: 'Documentation',
+            //     icon: 'pi pi-fw pi-book',
+            //     to: '/documentation'
+            // },
             {
-                label: 'Documentation',
-                icon: 'pi pi-fw pi-book',
-                to: '/documentation'
-            },
-            {
-                label: 'View Source',
-                icon: 'pi pi-fw pi-github',
-                url: 'https://github.com/primefaces/sakai-vue',
-                target: '_blank'
+                label: 'Logout',
+                icon: 'pi pi-fw pi-sign-out',
+                command: async () => {
+                    await logout(); // Call the logout function
+                    window.location.href = 'auth/login'; // Redirect to the login page'
+                }
             }
         ]
     }

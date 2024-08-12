@@ -34,6 +34,11 @@ const routes = [
                 component: () => import('@/views/Dashboard.vue')
             },
             {
+                path: '/new/land',
+                name: 'land',
+                component: () => import('@/views/pages/product/land.vue')
+            },
+            {
                 path: '/uikit/formlayout',
                 name: 'formlayout',
                 component: () => import('@/views/uikit/FormLayout.vue')
@@ -152,6 +157,12 @@ const routes = [
         path: '/auth/error',
         name: 'error',
         component: () => import('@/views/pages/auth/Error.vue')
+    },
+    // Catch-all route for 404 errors
+    {
+        path: '/:pathMatch(.*)*',
+        name: 'catchAll',
+        component: () => import('@/views/pages/NotFound.vue')
     }
 ];
 
