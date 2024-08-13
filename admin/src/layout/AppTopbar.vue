@@ -12,7 +12,7 @@ const { onMenuToggle, toggleDarkMode, isDarkTheme } = useLayout();
                 <i class="pi pi-bars"></i>
             </button>
             <router-link to="/" class="layout-topbar-logo">
-                <svg viewBox="0 0 54 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- <svg viewBox="0 0 54 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path
                         fill-rule="evenodd"
                         clip-rule="evenodd"
@@ -28,9 +28,12 @@ const { onMenuToggle, toggleDarkMode, isDarkTheme } = useLayout();
                             fill="var(--primary-color)"
                         />
                     </g>
-                </svg>
+                </svg> -->
 
-                <span>RGPAPP ADMIN</span>
+                <span class="flex flex-wrap">
+                    <!-- Add the logo image here -->
+                    <img src="/logo.png" alt="Logo" fill="none" class="mb-2 w-100% h-7 mx-auto" />
+                </span>
             </router-link>
         </div>
 

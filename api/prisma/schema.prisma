@@ -14,36 +14,29 @@ datasource db {
 }
 
 model Product {
-  id            String      @id @default(auto()) @map("_id") @db.ObjectId
-  description   String
-  price         Int
-  discountPrice Int?
-  size          Float
-  furnished     Boolean
-  parking       Boolean
-  type          Type
-  category      Category
-  productType   ProductType
-  property      Property?
-  offer         Boolean
-  active        Boolean
-  landId        String?     @db.ObjectId
-  buildingId    String?     @db.ObjectId
-  mediaId       String?     @db.ObjectId
-  user          User        @relation(fields: [userId], references: [id])
-  userId        String      @db.ObjectId
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  land          Land?       @relation(fields: [landId], references: [id])
-  building      Building?   @relation(fields: [buildingId], references: [id])
-  media         Media?      @relation(fields: [mediaId], references: [id])
-  savedPosts    SavedPost[]
+  id         String        @id @default(auto()) @map("_id") @db.ObjectId
+  customId   String        @unique
+  active     Boolean?
+  status     ProductStatus
+  landId     String?       @db.ObjectId
+  buildingId String?       @db.ObjectId
+  mediaId    String?       @db.ObjectId
+  user       User          @relation(fields: [userId], references: [id])
+  userId     String        @db.ObjectId
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  land       Land?         @relation(fields: [landId], references: [id])
+  building   Building?     @relation(fields: [buildingId], references: [id])
+  media      Media?        @relation(fields: [mediaId], references: [id])
+  leaseId    String?       @db.ObjectId
+  savedPosts SavedPost[]
+  Lease      Lease?
 }
 
-enum ProductType {
-  land
-  building
-  unit
+enum ProductStatus {
+  forRent
+  forSale
+  both
 }
 
 enum Category {
@@ -54,11 +47,6 @@ enum Category {
   specialPurpose
   mixedUse
   vacantLand
-}
-
-enum Type {
-  buy
-  rent
 }
 
 enum Property {
@@ -104,17 +92,20 @@ model User {
   savedPosts SavedPost[]
   chats      Chat[]      @relation(fields: [chatIDs], references: [id])
   chatIDs    String[]    @db.ObjectId
+  leases     Lease[]
+  auditLogs  AuditLog[]
 }
 
 model Admin {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  email     String   @unique
-  username  String   @unique
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  email     String     @unique
+  username  String     @unique
   password  String
-  isActive  Boolean  @default(true)
+  isActive  Boolean    @default(true)
   avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  auditLogs AuditLog[]
 }
 
 model Chat {
@@ -187,6 +178,7 @@ model Building {
   parkingSpaces        Int?
   amenities            String[]
   utilities            String?
+  furnished            Boolean?
   maintenanceCost      Float?
   managementCompany    String?
   constructionMaterial String?
@@ -208,6 +200,7 @@ model Unit {
   bedRoom     Int?
   unitName    String
   floorLevel  Int
+  furnished   Boolean?
   size        Float
   description String?
   amenities   String[]
@@ -234,4 +227,126 @@ model Media {
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
   products               Product[]
+}
+
+model Lease {
+  id                   String                 @id @default(auto()) @map("_id") @db.ObjectId
+  productId            String                 @unique @db.ObjectId
+  userId               String?                @db.ObjectId
+  leaseNumber          String                 @unique
+  price                Int
+  rentalPeriod         RentalPeriod
+  discountPrice        Int?
+  discountDuration     Int?
+  status               LeaseStatus
+  paymentSchedule      PaymentSchedule[]
+  documents            Document[]
+  termsAndConditions   String?
+  availabilityCalendar AvailabilityCalendar[]
+  contract             Contract?              @relation
+  bookings             Booking[]
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  user                 User?                  @relation(fields: [userId], references: [id])
+  product              Product                @relation(fields: [productId], references: [id])
+}
+
+enum RentalPeriod {
+  daily
+  weekly
+  monthly
+  yearly
+}
+
+enum LeaseStatus {
+  active
+  terminated
+  renewed
+  pending
+}
+
+model Booking {
+  id         String        @id @default(auto()) @map("_id") @db.ObjectId
+  productId  String        @db.ObjectId
+  userId     String        @db.ObjectId
+  startDate  DateTime
+  endDate    DateTime
+  totalPrice Int
+  status     BookingStatus
+  product    Lease         @relation(fields: [productId], references: [productId])
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  canceled
+}
+
+model AvailabilityCalendar {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  productId String   @db.ObjectId
+  date      DateTime
+  available Boolean
+  price     Int?
+  product   Lease    @relation(fields: [productId], references: [productId])
+}
+
+model Contract {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  leaseId      String   @unique @db.ObjectId
+  lease        Lease    @relation(fields: [leaseId], references: [id])
+  contractDate DateTime
+  startDate    DateTime
+  endDate      DateTime
+  terms        String
+  parties      String[]
+  signatures   String[] // or use a separate signature table
+  // other contract details
+}
+
+model PaymentSchedule {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  leaseId       String        @db.ObjectId
+  amount        Int?
+  dueDate       DateTime
+  paymentStatus PaymentStatus
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  lease Lease @relation(fields: [leaseId], references: [id])
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  overdue
+}
+
+model Document {
+  id           String       @id @default(auto()) @map("_id") @db.ObjectId
+  leaseId      String       @db.ObjectId
+  documentType DocumentType
+  content      String // or use a file storage system
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  lease Lease @relation(fields: [leaseId], references: [id])
+}
+
+enum DocumentType {
+  addendum
+  inspectionReport
+  other
+}
+
+model AuditLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  action      String
+  targetModel String
+  targetId    String
+  changes     Json
+  user        User     @relation(fields: [actorId], references: [id])
+  admin       Admin    @relation(fields: [actorId], references: [id])
+  actorId     String   @db.ObjectId
+  createdAt   DateTime @default(now())
 }

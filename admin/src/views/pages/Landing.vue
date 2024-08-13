@@ -12,7 +12,7 @@ function smoothScroll(id) {
         <div id="home" class="landing-wrapper overflow-hidden">
             <div class="py-6 px-6 mx-0 md:mx-12 lg:mx-20 lg:px-20 flex items-center justify-between relative lg:static">
                 <a class="flex items-center" href="#">
-                    <svg viewBox="0 0 54 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-12 mr-2">
+                    <!-- <svg viewBox="0 0 54 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-12 mr-2">
                         <path
                             fill-rule="evenodd"
                             clip-rule="evenodd"
@@ -28,7 +28,7 @@ function smoothScroll(id) {
                                 fill="var(--primary-color)"
                             />
                         </g>
-                    </svg>
+                    </svg> -->
                     <span class="text-surface-900 dark:text-surface-0 font-medium text-2xl leading-normal mr-20">RGPAPP ADMIN</span>
                 </a>
                 <Button
@@ -385,7 +385,7 @@ function smoothScroll(id) {
                 <div class="grid grid-cols-12 gap-4">
                     <div class="col-span-12 md:col-span-2">
                         <a @click="smoothScroll('#home')" class="flex flex-wrap items-center justify-center md:justify-start md:mb-0 mb-4 cursor-pointer">
-                            <svg viewBox="0 0 54 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-14 mr-2">
+                            <!-- <svg viewBox="0 0 54 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-14 mr-2">
                                 <path
                                     fill-rule="evenodd"
                                     clip-rule="evenodd"
@@ -401,7 +401,7 @@ function smoothScroll(id) {
                                         fill="var(--primary-color)"
                                     />
                                 </g>
-                            </svg>
+                            </svg> -->
                             <h4 class="font-medium text-3xl text-surface-900 dark:text-surface-0">RGPAPP ADMIN</h4>
                         </a>
                     </div>

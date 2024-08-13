@@ -220,7 +220,7 @@ const model = ref([
                 icon: 'pi pi-fw pi-sign-out',
                 command: async () => {
                     await logout(); // Call the logout function
-                    window.location.href = 'auth/login'; // Redirect to the login page'
+                    location.href = 'auth/login'; // Redirect to the login page'
                 }
             }
         ]
