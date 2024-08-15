@@ -1,21 +1,26 @@
 import express from "express";
 import { verifyToken } from "../middleware/verifyToken.js";
-import { verifyAdmin } from "../middleware/verifyAdmin.js";
+// import { verifyAdmin } from "../middleware/verifyAdmin.js";
+import { authenticateToken } from "../middleware/admin.auth.middleware.js";
 import {
-    getProducts,
-    getProductById,
-    addProduct,
-    updateProduct,
-    deleteProduct,
-  } from "../controllers/product.controller.js";
+  getProducts,
+  getProductById,
+  addProductLand,
+  updateProduct,
+  deleteProduct,
+} from "../controllers/product.controller.js";
 
 const router = express.Router();
 
 // Product Routes
-router.get("/products", getProducts);
-router.get("/products/:id", getProductById);
-router.post("/products", verifyToken, verifyAdmin, addProduct);
-router.put("/products/:id", verifyToken, verifyAdmin, updateProduct);
-router.delete("/products/:id", verifyToken, verifyAdmin, deleteProduct);
+
+//Product Land Start//
+router.post("/land", authenticateToken, addProductLand);
+//Product Land End//
+
+router.get("/", getProducts);
+router.get("/:id", getProductById);
+router.put("/:id", verifyToken, authenticateToken, updateProduct);
+router.delete("/:id", verifyToken, authenticateToken, deleteProduct);
 
 export default router;

@@ -11,7 +11,7 @@ import {
 import {
   getProducts,
   getProductById,
-  addProduct,
+  addProductLand,
   updateProduct,
   deleteProduct,
 } from "../controllers/product.controller.js";
@@ -48,7 +48,7 @@ router.delete("/:id", verifyToken, verifyAdmin, deletePost);
 // Product Routes
 router.get("/products", getProducts);
 router.get("/products/:id", getProductById);
-router.post("/products", verifyToken, verifyAdmin, addProduct);
+router.post("/products", verifyToken, verifyAdmin, addProductLand);
 router.put("/products/:id", verifyToken, verifyAdmin, updateProduct);
 router.delete("/products/:id", verifyToken, verifyAdmin, deleteProduct);
 

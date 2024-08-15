@@ -18,6 +18,7 @@ model Product {
   customId   String        @unique
   active     Boolean?
   status     ProductStatus
+  category   Category
   landId     String?       @db.ObjectId
   buildingId String?       @db.ObjectId
   mediaId    String?       @db.ObjectId
@@ -43,10 +44,12 @@ enum Category {
   residential
   commercial
   industrial
-  agricultural
   specialPurpose
   mixedUse
+
+  agricultural
   vacantLand
+  openSpaceRecreational
 }
 
 enum Property {
