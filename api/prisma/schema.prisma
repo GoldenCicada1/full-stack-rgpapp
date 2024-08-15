@@ -31,7 +31,7 @@ model Product {
   media      Media?        @relation(fields: [mediaId], references: [id])
   leaseId    String?       @db.ObjectId
   savedPosts SavedPost[]
-  Lease      Lease?
+  lease      Lease?
 }
 
 enum ProductStatus {

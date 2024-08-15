@@ -119,7 +119,7 @@ export const addProductLand = async (req, res) => {
               },
             },
             media: true,
-            Lease: true,
+            lease: true,
           },
         });
 
@@ -179,7 +179,7 @@ export const getProductLandById = async (req, res) => {
             },
           },
           media: true,
-          Lease: true,
+          lease: true,
         },
       });
     } else {
@@ -193,7 +193,7 @@ export const getProductLandById = async (req, res) => {
             },
           },
           media: true,
-          Lease: true,
+          lease: true,
         },
       });
     }
@@ -258,7 +258,7 @@ export const getProductsLand = async (req, res) => {
             },
           },
           media: true,
-          Lease: true,
+          lease: true,
         },
       }),
     ]);
@@ -292,7 +292,7 @@ export const deleteProductLand = async (req, res) => {
         },
         include: {
           media: true,
-          Lease: true,
+          lease: true,
         },
       });
     } else {
@@ -303,7 +303,7 @@ export const deleteProductLand = async (req, res) => {
         },
         include: {
           media: true,
-          Lease: true,
+          lease: true,
         },
       });
     }
@@ -322,10 +322,10 @@ export const deleteProductLand = async (req, res) => {
     }
 
     // Delete associated lease
-    if (product.Lease) {
+    if (product.lease) {
       await prisma.lease.delete({
         where: {
-          id: product.Lease.id,
+          id: product.lease.id,
         },
       });
     }
@@ -337,11 +337,9 @@ export const deleteProductLand = async (req, res) => {
       },
     });
 
-    res
-      .status(200)
-      .json({
-        message: "Product and associated media and lease deleted successfully",
-      });
+    res.status(200).json({
+      message: "Product and associated media and lease deleted successfully",
+    });
   } catch (error) {
     console.error("Error deleting product:", error);
     res.status(500).json({ message: "Failed to delete product" });
@@ -349,7 +347,104 @@ export const deleteProductLand = async (req, res) => {
 };
 
 export const updateProductLand = async (req, res) => {
-  /* implementation */
+  const productId = req.params.id; // Assuming the product ID is passed as a route parameter
+  const { productData } = req.body; // Assuming the update data is sent in the request body
+
+  if (!productId) {
+    return res.status(400).json({ message: "Product ID is required." });
+  }
+
+  try {
+    // Find the existing product by Object ID or Custom ID
+    const product = await prisma.product.findUnique({
+      where: {
+        id: /^[0-9a-fA-F]{24}$/.test(productId) ? productId : undefined,
+        customId: /^[0-9a-fA-F]{24}$/.test(productId) ? undefined : productId,
+      },
+      include: {
+        land: {
+          include: {
+            location: true, // Include location details if needed
+          },
+        },
+        media: true,
+        lease: true,
+      },
+    });
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Prepare data for updating specific parts
+    const updateData = {};
+
+    // Update product fields
+    if (productData.productData) {
+      updateData.productData = productData.productData;
+    }
+
+    // Update location separately if provided
+    if (productData.locationData) {
+      await prisma.location.update({
+        where: { id: product.land.locationId }, // Ensure the correct location is updated
+        data: productData.locationData,
+      });
+    }
+
+    // Update land if provided
+    if (productData.landData) {
+      await prisma.land.update({
+        where: { id: product.landId },
+        data: productData.landData,
+      });
+    }
+
+    // Update media if provided
+    if (productData.mediaData) {
+      await prisma.media.update({
+        where: { id: product.mediaId },
+        data: productData.mediaData,
+      });
+    }
+
+    // Update lease if provided
+    if (productData.leaseData) {
+      await prisma.lease.update({
+        where: { id: product.leaseId },
+        data: productData.leaseData,
+      });
+    }
+
+    // Update the product itself
+    const updatedProduct = await prisma.product.update({
+      where: {
+        id: product.id, // Ensure update by Object ID
+      },
+      data: updateData,
+      include: {
+        land: {
+          include: {
+            location: true, // Include location details in the result
+          },
+        },
+        media: true,
+        lease: true,
+      },
+    });
+
+    res
+      .status(200)
+      .json({
+        message: "Product updated successfully",
+        product: updatedProduct,
+      });
+  } catch (error) {
+    console.error("Error updating product:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to update product: " + error.message });
+  }
 };
 
 //Product Land Management End//
