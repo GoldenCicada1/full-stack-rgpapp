@@ -3,13 +3,15 @@ import FloatingConfigurator from '@/components/FloatingConfigurator.vue';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { login } from '@/service/authService';
+import { useToast } from 'primevue/usetoast';
 
 const username = ref('');
 const password = ref('');
 const checked = ref(false);
-const errorMessage = ref('');
+
 
 const router = useRouter();
+const toast = useToast();
 
 const handleLogin = async () => {
     try {
@@ -23,11 +25,12 @@ const handleLogin = async () => {
             // Store token in local storage
             localStorage.setItem('authToken', token);
             router.push({ name: 'dashboard' }); // Redirect to dashboard or desired route
+            toast.add({ severity: 'success', summary: 'Login Successful', detail: 'Redirecting to dashboard...', life: 3000 });
         } else {
-            errorMessage.value = 'Login failed: No token received';
+            toast.add({ severity: 'error', summary: 'Login Failed', detail: 'No token received', life: 3000 });
         }
     } catch (error) {
-        errorMessage.value = error.message || 'Login failed';
+        toast.add({ severity: 'error', summary: 'Login Failed', detail: error.message || 'An error occurred', life: 3000 });
     }
 };
 </script>
@@ -60,7 +63,7 @@ const handleLogin = async () => {
                             <span class="font-medium no-underline ml-2 text-right cursor-pointer text-primary">Forgot password?</span>
                         </div>
                         <Button label="Sign In" class="w-full" @click="handleLogin"></Button>
-                        <p v-if="errorMessage" class="text-red-500 mt-4">{{ errorMessage }}</p>
+                    
                     </div>
                 </div>
             </div>
