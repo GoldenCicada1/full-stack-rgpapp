@@ -277,6 +277,81 @@ export const getProductsLand = async (req, res) => {
   }
 };
 
+export const deleteProductLand = async (req, res) => {
+  const productId = req.params.id; // Assuming the product ID is passed as a route parameter
+
+  try {
+    let product;
+
+    // Check if the product ID is an Object ID or Custom ID
+    if (/^[0-9a-fA-F]{24}$/.test(productId)) {
+      // Object ID format (MongoDB)
+      product = await prisma.product.findUnique({
+        where: {
+          id: productId,
+        },
+        include: {
+          media: true,
+          Lease: true,
+        },
+      });
+    } else {
+      // Custom ID format
+      product = await prisma.product.findUnique({
+        where: {
+          customId: productId,
+        },
+        include: {
+          media: true,
+          Lease: true,
+        },
+      });
+    }
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Delete associated media
+    if (product.media) {
+      await prisma.media.delete({
+        where: {
+          id: product.media.id,
+        },
+      });
+    }
+
+    // Delete associated lease
+    if (product.Lease) {
+      await prisma.lease.delete({
+        where: {
+          id: product.Lease.id,
+        },
+      });
+    }
+
+    // Delete the product
+    await prisma.product.delete({
+      where: {
+        id: product.id, // Ensure deletion by Object ID
+      },
+    });
+
+    res
+      .status(200)
+      .json({
+        message: "Product and associated media and lease deleted successfully",
+      });
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    res.status(500).json({ message: "Failed to delete product" });
+  }
+};
+
+export const updateProductLand = async (req, res) => {
+  /* implementation */
+};
+
 //Product Land Management End//
 
 export const getProducts = async (req, res) => {

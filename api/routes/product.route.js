@@ -6,6 +6,8 @@ import {
   addProductLand,
   getProductLandById,
   getProductsLand,
+  deleteProductLand,
+  updateProductLand,
   getProducts,
   getProductById,
   updateProduct,
@@ -20,6 +22,8 @@ const router = express.Router();
 router.post("/land", authenticateToken, addProductLand);
 router.get("/land/:id", authenticateToken, getProductLandById);
 router.get("/land", authenticateToken, getProductsLand);
+router.delete("/land/:id", authenticateToken, deleteProductLand);
+router.put("/land/:id", authenticateToken, updateProductLand);
 //Product Land End//
 
 router.get("/", getProducts);
