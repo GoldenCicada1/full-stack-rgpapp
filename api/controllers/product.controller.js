@@ -6,12 +6,8 @@ import { processLeaseData } from "../lib/addLease.js";
 import validator from "validator";
 
 //Product Management Start//
-export const getProducts = async (req, res) => {
-  /* implementation */
-};
-export const getProductById = async (req, res) => {
-  /* implementation */
-};
+
+//Product Land Management Start//
 export const addProductLand = async (req, res) => {
   // Log the incoming request body
   console.log("Request Body:", req.body);
@@ -159,6 +155,69 @@ export const addProductLand = async (req, res) => {
   } finally {
     await prisma.$disconnect();
   }
+};
+
+export const getProductLandById = async (req, res) => {
+  const productId = req.params.id; // Assuming the product ID is passed as a route parameter
+
+  if (!productId) {
+    return res.status(400).json({ message: "Product ID is required." });
+  }
+
+  try {
+    let product;
+
+    // Check if the ID is a valid Object ID (assuming Object ID format is a 24-character hex string)
+    if (/^[0-9a-fA-F]{24}$/.test(productId)) {
+      // Query by Object ID
+      product = await prisma.product.findUnique({
+        where: { id: productId },
+        include: {
+          land: {
+            include: {
+              location: true, // Include the location details of the associated land
+            },
+          },
+          media: true,
+          Lease: true,
+        },
+      });
+    } else {
+      // Query by Custom ID
+      product = await prisma.product.findUnique({
+        where: { customId: productId },
+        include: {
+          land: {
+            include: {
+              location: true, // Include the location details of the associated land
+            },
+          },
+          media: true,
+          Lease: true,
+        },
+      });
+    }
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    res.status(200).json(product);
+  } catch (error) {
+    console.error("Error fetching product:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to fetch product: " + error.message });
+  }
+};
+
+//Product Land Management End//
+
+export const getProducts = async (req, res) => {
+  /* implementation */
+};
+export const getProductById = async (req, res) => {
+  /* implementation */
 };
 export const updateProduct = async (req, res) => {
   /* implementation */

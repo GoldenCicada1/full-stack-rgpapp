@@ -3,9 +3,10 @@ import { verifyToken } from "../middleware/verifyToken.js";
 // import { verifyAdmin } from "../middleware/verifyAdmin.js";
 import { authenticateToken } from "../middleware/admin.auth.middleware.js";
 import {
+  addProductLand,
+  getProductLandById,
   getProducts,
   getProductById,
-  addProductLand,
   updateProduct,
   deleteProduct,
 } from "../controllers/product.controller.js";
@@ -16,6 +17,7 @@ const router = express.Router();
 
 //Product Land Start//
 router.post("/land", authenticateToken, addProductLand);
+router.get("/land/:id", authenticateToken, getProductLandById);
 //Product Land End//
 
 router.get("/", getProducts);
