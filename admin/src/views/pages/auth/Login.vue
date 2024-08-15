@@ -41,7 +41,7 @@ const handleLogin = async () => {
                     <div class="text-center mb-8">
                         <!-- Add the logo image here -->
                         <img src="/logo.png" alt="Logo" fill="none" class="mb-2 w-28 mx-auto" />
-                        <div class="text-surface-900 dark:text-surface-0 text-3xl font-semibold font-medium mb-4">ADMIN PANEL</div>
+                        <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">ADMIN PANEL</div>
                         <span class="text-muted-color font-medium">Sign in to continue</span>
                     </div>
 

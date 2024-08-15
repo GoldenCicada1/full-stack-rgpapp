@@ -1,8 +1,10 @@
 <script setup>
 import { ref } from 'vue';
-
+import { useRouter } from 'vue-router'; // Import useRouter
 import AppMenuItem from './AppMenuItem.vue';
 import { logout } from '@/service/authService';
+
+const router = useRouter(); // Create a router instance
 
 const model = ref([
     {
@@ -220,7 +222,7 @@ const model = ref([
                 icon: 'pi pi-fw pi-sign-out',
                 command: async () => {
                     await logout(); // Call the logout function
-                    location.href = 'auth/login'; // Redirect to the login page'
+                    router.push('/auth/login'); // Redirect to the login page using Vue Router
                 }
             }
         ]
