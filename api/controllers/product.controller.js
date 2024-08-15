@@ -2,6 +2,7 @@ import prisma from "../lib/prisma.js";
 import jwt from "jsonwebtoken";
 import { processLandData } from "../lib/addLand.js";
 import { processMediaData } from "../lib/addMedia.js";
+import { processLeaseData } from "../lib/addLease.js";
 import validator from "validator";
 
 //Product Management Start//
@@ -22,7 +23,7 @@ export const addProductLand = async (req, res) => {
     return res.status(400).json({ error: "Missing required data" });
   }
 
-  const { landData, status, category, mediaData } = productData;
+  const { landData, status, category, mediaData, leaseData } = productData;
 
   // Custom validation for status and category
   const validStatuses = ["forRent", "forSale", "both"];
@@ -42,79 +43,104 @@ export const addProductLand = async (req, res) => {
   }
 
   try {
-   // Start the transaction
-   const result = await prisma.$transaction(async (tx) => {
-    try {
-      // Process Land Data and get finalLandId
-      const { finalLandId } = await processLandData(landData, tx);
+    // Start the transaction
+    const result = await prisma.$transaction(async (tx) => {
+      try {
+        let leaseId = null;
 
-      if (!finalLandId) {
-        throw new Error("Failed to get or create land.");
-      }
-    
+        // Create Lease if leaseData is provided
+        if (leaseData) {
+          const leaseResult = await processLeaseData(leaseData, tx);
+          leaseId = leaseResult.finalLeaseId;
+        }
 
-      // Retrieve the existing land data by finalLandId to get customId
-      const land = await tx.land.findUnique({
-        where: { id: finalLandId },
-        select: { customId: true }, // Only select the customId
-      });
+        // Process Land Data and get finalLandId
+        const { finalLandId } = await processLandData(landData, tx);
 
-      if (!land) {
-        throw new Error("Land with the provided ID does not exist.");
-      }
+        if (!finalLandId) {
+          throw new Error("Failed to get or create land.");
+        }
 
-      // Check if a product with the same land customId already exists
-      const existingProduct = await tx.product.findUnique({
-        where: { customId: land.customId },
-      });
+        // Retrieve the existing land data by finalLandId to get customId
+        const land = await tx.land.findUnique({
+          where: { id: finalLandId },
+          select: { customId: true }, // Only select the customId
+        });
 
-      if (existingProduct) {
-        // Return error if product already exists
-        throw new Error(
-          "Product with the provided land ID is already available."
-        );
-      }
+        if (!land) {
+          throw new Error("Land with the provided ID does not exist.");
+        }
 
-      // Process Media Data
-      const mediaResult = mediaData
-        ? await processMediaData(mediaData, tx)
-        : null;
+        // Check if a product with the same land customId already exists
+        const existingProduct = await tx.product.findUnique({
+          where: { customId: land.customId },
+        });
 
-      // Create New Product
-      const newProduct = await tx.product.create({
-        data: {
-          status,
-          category,
-          landId: finalLandId,
-          mediaId: mediaResult ? mediaResult.finalMediaId : null, // Attach mediaId if available
-          customId: land.customId, // Use the land's customId for the product
-          active: true, // Set default value or adjust as needed
-        },
-      });
+        if (existingProduct) {
+          // Return error if product already exists
+          throw new Error(
+            "Product with the provided land ID is already available."
+          );
+        }
 
-      return newProduct;
+        // Process Media Data
+        const mediaResult = mediaData
+          ? await processMediaData(mediaData, tx)
+          : null;
 
-    } catch (innerError) {
-      // Log the specific error and rethrow it
-      console.error("Error within transaction block:", innerError);
-      throw innerError;
-    }
-    });
-
-    const productWithDetails = await prisma.product.findUnique({
-      where: { id: result.id },
-      include: {
-        land: {
-          include: {
-            location: true, // Include location details of the associated land
+        // Create New Product
+        const newProduct = await tx.product.create({
+          data: {
+            status,
+            category,
+            land: { connect: { id: finalLandId } }, // Connect to land using the correct field name
+            media: mediaResult
+              ? { connect: { id: mediaResult.finalMediaId } }
+              : undefined, // Connect media if available
+            customId: land.customId, // Use the land's customId for the product
+            active: true, // Set default value or adjust as needed
+            leaseId: leaseId || undefined, // Ensure leaseId is set in the product
           },
-        },
-        media: true, // Include media details associated with the product
-      },
+        });
+
+        // Update Lease with the new productId if lease was created
+        if (leaseId) {
+          await tx.lease.update({
+            where: { id: leaseId },
+            data: {
+              product: { connect: { id: newProduct.id } },
+            },
+          });
+        }
+
+        // Retrieve the newly created product with details
+        const productWithDetails = await tx.product.findUnique({
+          where: { id: newProduct.id },
+          include: {
+            land: {
+              include: {
+                location: true,
+              },
+            },
+            media: true,
+            Lease: true,
+          },
+        });
+
+        // Return the results including the product and leaseId
+        return { productWithDetails, leaseId };
+      } catch (innerError) {
+        // Log the specific error and rethrow it
+        console.error("Error within transaction block:", innerError);
+        throw innerError;
+      }
     });
 
     // Send success response
-    res.status(201).json({ product: productWithDetails });
+    res.status(201).json({
+      product: result.productWithDetails,
+      leaseId: result.leaseId,
+    });
   } catch (error) {
     // Log the error
     console.error("Error adding product and land:", error);
@@ -134,7 +160,6 @@ export const addProductLand = async (req, res) => {
     await prisma.$disconnect();
   }
 };
-
 export const updateProduct = async (req, res) => {
   /* implementation */
 };
