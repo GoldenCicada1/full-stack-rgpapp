@@ -5,6 +5,7 @@ import { authenticateToken } from "../middleware/admin.auth.middleware.js";
 import {
   addProductLand,
   getProductLandById,
+  getProductsLand,
   getProducts,
   getProductById,
   updateProduct,
@@ -18,6 +19,7 @@ const router = express.Router();
 //Product Land Start//
 router.post("/land", authenticateToken, addProductLand);
 router.get("/land/:id", authenticateToken, getProductLandById);
+router.get("/land", authenticateToken, getProductsLand);
 //Product Land End//
 
 router.get("/", getProducts);

@@ -211,6 +211,72 @@ export const getProductLandById = async (req, res) => {
   }
 };
 
+export const getProductsLand = async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = "createdAt",
+    sortOrder = "desc",
+    filter = {},
+  } = req.query;
+
+  const pageNumber = parseInt(page, 10);
+  const pageSize = parseInt(limit, 10);
+  const orderBy = ["id", "status", "category", "createdAt"].includes(sortBy)
+    ? sortBy
+    : "createdAt";
+  const orderDirection = sortOrder.toLowerCase() === "asc" ? "asc" : "desc";
+
+  try {
+    // Define the filter criteria for land products
+    const filters = {
+      landId: { not: null }, // Ensure that only products with a landId are included
+    };
+
+    if (filter.status) {
+      filters.status = filter.status;
+    }
+
+    if (filter.category) {
+      filters.category = filter.category;
+    }
+
+    // Retrieve land products from the database
+    const [totalCount, products] = await prisma.$transaction([
+      prisma.product.count({ where: filters }),
+      prisma.product.findMany({
+        where: filters,
+        skip: (pageNumber - 1) * pageSize,
+        take: pageSize,
+        orderBy: {
+          [orderBy]: orderDirection,
+        },
+        include: {
+          land: {
+            include: {
+              location: true, // Include the location details of the associated land
+            },
+          },
+          media: true,
+          Lease: true,
+        },
+      }),
+    ]);
+
+    res.status(200).json({
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      currentPage: pageNumber,
+      products,
+    });
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to fetch products: " + error.message });
+  }
+};
+
 //Product Land Management End//
 
 export const getProducts = async (req, res) => {
