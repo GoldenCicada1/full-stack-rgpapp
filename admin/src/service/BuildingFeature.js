@@ -45,7 +45,7 @@ export const BuildingFeatureService = {
             // 'BBQ Area',
             // 'Spa/Wellness Center',
             'AS9032',
-            'AS9033',
+            'AS9033'
         ];
     },
 
