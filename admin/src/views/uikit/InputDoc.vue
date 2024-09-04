@@ -176,8 +176,6 @@ function searchCountry(event) {
                 <div class="font-semibold text-xl">Select</div>
                 <Select v-model="dropdownValue" :options="dropdownValues" optionLabel="name" placeholder="Select" />
 
-                
-
                 <div class="font-semibold text-xl">MultiSelect</div>
                 <MultiSelect v-model="multiselectValue" :options="multiselectValues" optionLabel="name" placeholder="Select Countries" :filter="true">
                     <template #value="slotProps">

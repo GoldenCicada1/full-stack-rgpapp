@@ -210,7 +210,7 @@ const model = ref([
         ]
     },
     {
-        label: 'Get Started',
+        label: 'Account',
         items: [
             // {
             //     label: 'Documentation',

@@ -4,7 +4,7 @@ import axios from 'axios';
 
 import { LandFeatureService } from '@/service/LandFeature.js'; // Import the service
 
-const selectedAutoValue = ref(null);
+// const selectedAutoValue = ref(null);
 const autoFilteredValue = ref([]);
 const autoValue = ref([]);
 
@@ -141,8 +141,8 @@ const handleSubmit = async () => {
         await axios.post('/api/land', { ...land.value, location: location.value });
 
         // Fetch the newly created land details from the server
-        const response = await axios.get('/api/land/latest'); // Adjust the endpoint as needed
-        submittedLand.value = response.data;
+        // const response = await axios.get('/api/land/latest'); // Adjust the endpoint as needed
+        // submittedLand.value = response.data;
 
         // Move to Step 4
         currentStep.value = '4';

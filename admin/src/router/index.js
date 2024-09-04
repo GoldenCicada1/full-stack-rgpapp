@@ -39,6 +39,11 @@ const routes = [
                 component: () => import('@/views/pages/product/land.vue')
             },
             {
+                path: '/new/building',
+                name: 'building',
+                component: () => import('@/views/pages/product/building.vue')
+            },
+            {
                 path: '/uikit/formlayout',
                 name: 'formlayout',
                 component: () => import('@/views/uikit/FormLayout.vue')
