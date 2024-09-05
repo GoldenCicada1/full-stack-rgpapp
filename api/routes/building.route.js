@@ -10,12 +10,15 @@ import {
   deleteBuilding,
   deleteMultipleBuildings,
   hardDeleteBuildings,
+  searchBuildingIds,
   // bulkUpdateBuildings,
+
 } from "../controllers/building.controller.js";
 
 const router = express.Router();
 
 // Building Routes
+router.get("/:value", searchBuildingIds);
 router.get("/", getBuildings);
 router.get("/:id", getBuildingById);
 router.post("/", verifyToken, verifyAdmin, addBuilding);

@@ -9,9 +9,11 @@
     },
     "dependencies": {
         "@primevue/themes": "^4.0.0",
+        "@vueuse/core": "^11.0.3",
         "axios": "^1.7.4",
         "chart.js": "3.3.2",
         "dotenv": "^16.4.5",
+        "lodash": "^4.17.21",
         "primeicons": "^6.0.1",
         "primevue": "^4.0.0",
         "vue": "^3.4.34",

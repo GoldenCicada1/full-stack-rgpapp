@@ -6,6 +6,50 @@ import { processLandData } from "../lib/addLand.js"; // Adjust the import path a
 import { generateBuildingCustomId } from "../lib/idGenerator.js"; // Adjust the import path as needed
 
 // Building Management Start
+export const searchBuildingIds = async (req, res) => {
+  const { value = '' } = req.params;
+  const { limit = 10 } = req.query;
+  const pageSize = parseInt(limit, 10);
+
+  try {
+    if (typeof value !== 'string' || isNaN(pageSize)) {
+      return res.status(400).json({ message: 'Invalid query or limit' });
+    }
+
+    // Build the filter for the search value
+    const filter = {
+      OR: [
+        {
+          customId: {
+            startsWith: value,
+            mode: 'insensitive',
+          },
+        },
+        {
+          customId: {
+            contains: value,
+            mode: 'insensitive',
+          },
+        },
+      ],
+    };
+
+    // Retrieve buildings from the database
+    const buildings = await prisma.building.findMany({
+      where: filter,
+      take: pageSize,
+      select: {
+        customId: true,
+        name: true,
+      },
+    });
+
+    res.status(200).json(buildings);
+  } catch (error) {
+    console.error('Error searching buildings:', error);
+    res.status(500).json({ message: 'Failed to fetch buildings: ' + error.message });
+  }
+};
 export const getBuildings = async (req, res) => {
   const {
     page = 1,

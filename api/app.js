@@ -42,7 +42,7 @@ app.use("/api/admin/auth", adminAuthRoute);
 app.use("/api/posts", postRoute);
 app.use("/api/locations", authenticateToken, locationRoute);
 app.use("/api/lands", authenticateToken, landRoute);
-app.use("/api/buildings", authenticateToken, buildingRoute);
+app.use("/api/buildings",  buildingRoute);
 app.use("/api/products", authenticateToken, productRoute);
 app.use("/api/units", authenticateToken, unitRoute);
 app.use("/api/test", testRoute);

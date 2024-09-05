@@ -1,12 +1,17 @@
 <script setup>
 import { ref } from 'vue';
 import ParkingClause from '@/views/clause/parking.vue';
+import SearchBuilding from '@/views/productSearch/searchBuilding.vue';
 // import axios from 'axios';
 
 const currentStep = ref('1');
 const activeTab = ref(0); // Initialize activeTab with a default value
 
-const search = ref('');
+const searchQuery = ref('');
+const updateSearchQuery = (value) => {
+    searchQuery.value = value;
+};
+
 const productType = ref(null);
 const radioValue = ref(null);
 const buildingType = ref(null);
@@ -93,15 +98,10 @@ const prevStep = () => {
                                     <!-- Step 1: Product Initial Details -->
                                     <div v-if="currentStep === '1'">
                                         <div class="flex flex-col gap-2 mt-4">
-                                            <div class="flex flex-col gap-2">
-                                                <IconField iconPosition="left">
-                                                    <InputText type="text" placeholder="Search Building" v-model="search" />
-                                                    <InputIcon class="pi pi-search" />
-                                                </IconField>
-                                            </div>
+                                            <SearchBuilding @update:searchQuery="updateSearchQuery" />
 
                                             <!-- Product Type Question -->
-                                            <div v-if="search" class="flex flex-col gap-2 mt-3 mb-4">
+                                            <div v-if="searchQuery" class="flex flex-col gap-2 mt-3 mb-4">
                                                 <p class="text-xl font-semibold">Product Type</p>
                                                 <div class="flex flex-col md:flex-row gap-4">
                                                     <!-- Rental Option -->
