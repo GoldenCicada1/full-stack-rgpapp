@@ -53,6 +53,6 @@ const handleInput = (event) => {
 
 <template>
     <div class="flex flex-col gap-2">
-        <AutoComplete v-model="selectedAutoValue" :suggestions="autoFilteredValue" optionLabel="customId" placeholder="Search Building" dropdown multiple display="chip" @input="handleInput" @complete="debouncedSearchBuilding(searchQuery)" />
+        <AutoComplete v-model="selectedAutoValue" :suggestions="autoFilteredValue" optionLabel="customId" placeholder="Search Building" dropdown multiple display="chip" @input="handleInput" />
     </div>
 </template>
