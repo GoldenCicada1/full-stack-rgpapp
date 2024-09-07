@@ -1,9 +1,18 @@
 <script setup>
-import { ref, watch, defineEmits } from 'vue';
+import { ref, watch, defineEmits, defineProps } from 'vue';
 import { useDebounceFn } from '@vueuse/core';
 import axios from 'axios';
 
-const selectedAutoValue = ref(null);
+const props = defineProps({
+    modelValue: {
+        type: Object,
+        default: null
+    }
+});
+
+const emit = defineEmits(['update:modelValue', 'update:searchQuery']);
+
+const selectedAutoValue = ref(props.modelValue);
 const autoFilteredValue = ref([]);
 const searchQuery = ref('');
 
@@ -11,19 +20,14 @@ const API_URL = 'http://localhost:8800/api/buildings/';
 
 const searchBuilding = async (query) => {
     try {
-        // Log the URL for debugging
         const url = `${API_URL}${encodeURIComponent(query)}`;
-
-        // Ensure the query is correctly encoded
         const response = await axios.get(url, {
             params: { limit: 10 }
         });
-
-        // Update the suggestions based on the response
         autoFilteredValue.value = response.data;
     } catch (error) {
         console.error('Error fetching building data:', error);
-        autoFilteredValue.value = []; // Clear suggestions on error
+        autoFilteredValue.value = [];
     }
 };
 
@@ -42,13 +46,15 @@ watch(searchQuery, (newQuery) => {
     }
 });
 
-const emit = defineEmits(['update:searchQuery']);
-
 const handleInput = (event) => {
-    const value = event.target.value || ''; // Extract value from event
+    const value = event.target.value || '';
     searchQuery.value = value;
     emit('update:searchQuery', searchQuery.value);
 };
+
+watch(selectedAutoValue, (newValue) => {
+    emit('update:modelValue', newValue);
+});
 </script>
 
 <template>

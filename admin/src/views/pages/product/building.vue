@@ -8,6 +8,9 @@ const currentStep = ref('1');
 const activeTab = ref(0); // Initialize activeTab with a default value
 
 const searchQuery = ref('');
+const selectedAutoValue = ref(null);
+
+// Function to update search query
 const updateSearchQuery = (value) => {
     searchQuery.value = value;
 };
@@ -98,7 +101,7 @@ const prevStep = () => {
                                     <!-- Step 1: Product Initial Details -->
                                     <div v-if="currentStep === '1'">
                                         <div class="flex flex-col gap-2 mt-4">
-                                            <SearchBuilding @update:searchQuery="updateSearchQuery" />
+                                            <SearchBuilding v-model="selectedAutoValue" @update:searchQuery="updateSearchQuery" />
 
                                             <!-- Product Type Question -->
                                             <div v-if="searchQuery" class="flex flex-col gap-2 mt-3 mb-4">
