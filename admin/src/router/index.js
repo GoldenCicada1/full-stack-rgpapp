@@ -43,6 +43,8 @@ const routes = [
                 name: 'building',
                 component: () => import('@/views/pages/product/building.vue')
             },
+
+            //Ui Component start
             {
                 path: '/uikit/formlayout',
                 name: 'formlayout',
@@ -134,6 +136,8 @@ const routes = [
                 name: 'documentation',
                 component: () => import('@/views/pages/Documentation.vue')
             }
+
+            //Ui Component end
         ]
     },
     {
