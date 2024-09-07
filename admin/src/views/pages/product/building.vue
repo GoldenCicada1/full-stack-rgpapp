@@ -9,10 +9,16 @@ const activeTab = ref(0); // Initialize activeTab with a default value
 
 const searchQuery = ref('');
 const selectedAutoValue = ref(null);
+const searchError = ref(''); // Track error from SearchBuilding
 
 // Function to update search query
 const updateSearchQuery = (value) => {
     searchQuery.value = value;
+};
+
+// Handle error from SearchBuilding
+const handleError = (error) => {
+    searchError.value = error;
 };
 
 const productType = ref(null);
@@ -20,6 +26,11 @@ const radioValue = ref(null);
 const buildingType = ref(null);
 
 const nextStep = () => {
+    if (searchError.value) {
+        // Prevent moving to the next step if there's an error
+        console.log('Cannot proceed due to the error:', searchError.value);
+        return;
+    }
     if (currentStep.value === '1') {
         //Rental Branch
         if (productType.value === 'Rental' && buildingType.value === 'Residential') {
@@ -101,7 +112,7 @@ const prevStep = () => {
                                     <!-- Step 1: Product Initial Details -->
                                     <div v-if="currentStep === '1'">
                                         <div class="flex flex-col gap-2 mt-4">
-                                            <SearchBuilding v-model="selectedAutoValue" @update:searchQuery="updateSearchQuery" />
+                                            <SearchBuilding v-model="selectedAutoValue" @update:searchQuery="updateSearchQuery" @update:error="handleError" />
 
                                             <!-- Product Type Question -->
                                             <div v-if="searchQuery" class="flex flex-col gap-2 mt-3 mb-4">
