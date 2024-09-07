@@ -11,6 +11,10 @@ const searchQuery = ref('');
 const selectedAutoValue = ref(null);
 const searchError = ref(''); // Track error from SearchBuilding
 
+// Loading and status state
+const isLoading = ref(false);
+const status = ref(''); // Possible values: 'loading', 'success', 'error'
+
 // Function to update search query
 const updateSearchQuery = (value) => {
     searchQuery.value = value;
@@ -19,57 +23,89 @@ const updateSearchQuery = (value) => {
 // Handle error from SearchBuilding
 const handleError = (error) => {
     searchError.value = error;
+    status.value = 'error';
 };
 
 const productType = ref(null);
 const radioValue = ref(null);
 const buildingType = ref(null);
 
-const nextStep = () => {
+const validateSelectedValue = () => {
+    if (!selectedAutoValue.value) {
+        searchError.value = 'Please select a building.';
+        status.value = 'error';
+        return false;
+    }
+    searchError.value = '';
+    return true;
+};
+
+const nextStep = async () => {
+    // Validate selected value from SearchBuilding
+    if (!validateSelectedValue()) {
+        console.log('Cannot proceed due to validation error:', searchError.value);
+        return;
+    }
+
     if (searchError.value) {
+        status.value = 'error'; // Set status to error if there's an error
         // Prevent moving to the next step if there's an error
         console.log('Cannot proceed due to the error:', searchError.value);
         return;
     }
-    if (currentStep.value === '1') {
-        //Rental Branch
-        if (productType.value === 'Rental' && buildingType.value === 'Residential') {
-            currentStep.value = '2-rentalResidential';
-        } else if (productType.value === 'Rental' && buildingType.value === 'Commercial') {
-            currentStep.value = '2-rentalCommercial';
-        } else if (productType.value === 'Rental' && buildingType.value === 'Industrial') {
-            currentStep.value = '2-rentalIndustrial';
-        } else if (productType.value === 'Rental' && buildingType.value === 'SpecialPurpose') {
-            currentStep.value = '2-rentalSpecialPurpose';
-        } else if (productType.value === 'Rental' && buildingType.value === 'MixedUse') {
-            currentStep.value = '2-rentalMixedUse';
 
-            // BuySale Branch
-        } else if (productType.value === 'BuySale' && buildingType.value === 'Residential') {
-            currentStep.value = '2-BuySaleResidential';
-        } else if (productType.value === 'BuySale' && buildingType.value === 'Commercial') {
-            currentStep.value = '2-BuySaleCommercial';
-        } else if (productType.value === 'BuySale' && buildingType.value === 'Industrial') {
-            currentStep.value = '2-BuySaleIndustrial';
-        } else if (productType.value === 'BuySale' && buildingType.value === 'SpecialPurpose') {
-            currentStep.value = '2-BuySaleSpecialPurpose';
-        } else if (productType.value === 'BuySale' && buildingType.value === 'MixedUse') {
-            currentStep.value = '2-BuySaleMixedUse';
+    isLoading.value = true;
+    status.value = 'loading';
+    try {
+        // Simulate a delay to show loading animation
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
-            // Both Branch
-        } else if (productType.value === 'Both' && buildingType.value === 'Residential') {
-            currentStep.value = '2-BothResidential';
-        } else if (productType.value === 'Both' && buildingType.value === 'Commercial') {
-            currentStep.value = '2-BothCommercial';
-        } else if (productType.value === 'Both' && buildingType.value === 'Industrial') {
-            currentStep.value = '2-BothIndustrial';
-        } else if (productType.value === 'Both' && buildingType.value === 'SpecialPurpose') {
-            currentStep.value = '2-BothSpecialPurpose';
-        } else if (productType.value === 'Both' && buildingType.value === 'MixedUse') {
-            currentStep.value = '2-BothMixedUse';
+        if (currentStep.value === '1') {
+            //Rental Branch
+            if (productType.value === 'Rental' && buildingType.value === 'Residential') {
+                currentStep.value = '2-rentalResidential';
+            } else if (productType.value === 'Rental' && buildingType.value === 'Commercial') {
+                currentStep.value = '2-rentalCommercial';
+            } else if (productType.value === 'Rental' && buildingType.value === 'Industrial') {
+                currentStep.value = '2-rentalIndustrial';
+            } else if (productType.value === 'Rental' && buildingType.value === 'SpecialPurpose') {
+                currentStep.value = '2-rentalSpecialPurpose';
+            } else if (productType.value === 'Rental' && buildingType.value === 'MixedUse') {
+                currentStep.value = '2-rentalMixedUse';
+
+                // BuySale Branch
+            } else if (productType.value === 'BuySale' && buildingType.value === 'Residential') {
+                currentStep.value = '2-BuySaleResidential';
+            } else if (productType.value === 'BuySale' && buildingType.value === 'Commercial') {
+                currentStep.value = '2-BuySaleCommercial';
+            } else if (productType.value === 'BuySale' && buildingType.value === 'Industrial') {
+                currentStep.value = '2-BuySaleIndustrial';
+            } else if (productType.value === 'BuySale' && buildingType.value === 'SpecialPurpose') {
+                currentStep.value = '2-BuySaleSpecialPurpose';
+            } else if (productType.value === 'BuySale' && buildingType.value === 'MixedUse') {
+                currentStep.value = '2-BuySaleMixedUse';
+
+                // Both Branch
+            } else if (productType.value === 'Both' && buildingType.value === 'Residential') {
+                currentStep.value = '2-BothResidential';
+            } else if (productType.value === 'Both' && buildingType.value === 'Commercial') {
+                currentStep.value = '2-BothCommercial';
+            } else if (productType.value === 'Both' && buildingType.value === 'Industrial') {
+                currentStep.value = '2-BothIndustrial';
+            } else if (productType.value === 'Both' && buildingType.value === 'SpecialPurpose') {
+                currentStep.value = '2-BothSpecialPurpose';
+            } else if (productType.value === 'Both' && buildingType.value === 'MixedUse') {
+                currentStep.value = '2-BothMixedUse';
+            }
+        } else if (currentStep.value.startsWith('2')) {
+            currentStep.value = '3';
         }
-    } else if (currentStep.value.startsWith('2')) {
-        currentStep.value = '3';
+        status.value = 'success'; // Set status to success after processing
+    } catch (error) {
+        status.value = 'error'; // Set status to error if something goes wrong
+        console.error('Error during step transition:', error);
+    } finally {
+        isLoading.value = false;
     }
 };
 
@@ -103,7 +139,6 @@ const prevStep = () => {
                             <StepList>
                                 <Step value="1"></Step>
                                 <Step value="2"></Step>
-                                <Step value="3"></Step>
                             </StepList>
                         </Stepper>
                         <div class="flex flex-col md:flex-row items-center justify-center gap-8">
@@ -112,7 +147,7 @@ const prevStep = () => {
                                     <!-- Step 1: Product Initial Details -->
                                     <div v-if="currentStep === '1'">
                                         <div class="flex flex-col gap-2 mt-4">
-                                            <SearchBuilding v-model="selectedAutoValue" @update:searchQuery="updateSearchQuery" @update:error="handleError" />
+                                            <SearchBuilding v-model="selectedAutoValue" :error="searchError" @update:searchQuery="updateSearchQuery" @update:error="handleError" />
 
                                             <!-- Product Type Question -->
                                             <div v-if="searchQuery" class="flex flex-col gap-2 mt-3 mb-4">
@@ -176,7 +211,13 @@ const prevStep = () => {
                                                     <Button @click="prevStep" label="Previous" severity="secondary" />
                                                 </div> -->
                                                 <div class="flex flex-wrap gap-2 w-full">
-                                                    <Button @click="nextStep" label="Next"></Button>
+                                                    <Button @click="nextStep" :disabled="isLoading" class="relative">
+                                                        <template v-if="isLoading">
+                                                            <i class="pi pi-spinner pi-spin"></i>
+                                                            <!-- PrimeVue spinner icon -->
+                                                        </template>
+                                                        <template v-else> Next </template></Button
+                                                    >
                                                 </div>
                                             </div>
                                         </div>
@@ -208,9 +249,7 @@ const prevStep = () => {
                                                 <div class="flex flex-wrap gap-2 w-full">
                                                     <Button @click="prevStep" label="Previous" severity="secondary" />
                                                 </div>
-                                                <div class="flex flex-wrap gap-2 w-full">
-                                                    <Button @click="nextStep" label="Next"></Button>
-                                                </div>
+                                                <button type="submit" class="bg-blue-500 text-white p-2 rounded">Submit</button>
                                             </div>
                                         </div>
                                         <div v-if="currentStep === '2-rentalCommercial'" class="flex flex-col gap-2">
@@ -387,12 +426,6 @@ const prevStep = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-
-                                    <!-- Step 3: Documents & Review -->
-                                    <div v-if="currentStep === '3'">
-                                        <button @click="prevStep" class="bg-gray-500 text-white p-2 rounded mr-2">Previous</button>
-                                        <button type="submit" class="bg-blue-500 text-white p-2 rounded">Submit</button>
                                     </div>
                                 </form>
                             </div>

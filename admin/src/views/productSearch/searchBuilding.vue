@@ -7,6 +7,10 @@ const props = defineProps({
     modelValue: {
         type: Object,
         default: null
+    },
+    error: {
+        type: String,
+        default: ''
     }
 });
 
@@ -16,7 +20,7 @@ const selectedAutoValue = ref(props.modelValue);
 const autoFilteredValue = ref([]);
 const searchQuery = ref('');
 const touched = ref(false); // Track if the user has interacted with the field
-const error = ref(''); // Track error messages
+const error = ref(props.error); // Track error messages, initialized from props
 
 const API_URL = 'http://localhost:8800/api/buildings/';
 
@@ -77,11 +81,20 @@ watch(isInvalid, (newInvalid) => {
         emit('update:error', '');
     }
 });
+
+// Watch for changes in error prop to update local error state
+watch(
+    () => props.error,
+    (newError) => {
+        error.value = newError;
+    }
+);
 </script>
 
 <template>
     <div class="flex flex-col gap-2">
         <AutoComplete v-model="selectedAutoValue" :suggestions="autoFilteredValue" optionLabel="customId" placeholder="Search Building" dropdown multiple display="chip" @input="handleInput" :invalid="isInvalid" />
-        <Message severity="error" v-if="isInvalid">Field is required</Message>
+
+        <Message v-if="error" severity="error">{{ error }}</Message>
     </div>
 </template>
