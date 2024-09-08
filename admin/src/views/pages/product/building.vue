@@ -30,6 +30,12 @@ const productType = ref(null);
 const radioValue = ref(null);
 const buildingType = ref(null);
 
+// Handle updates from ParkingClause
+const handleParkingDataUpdate = (newValue) => {
+    parkingData.value = newValue;
+    console.log('Updated parking data:', newValue); // Debugging
+};
+
 const validateSelectedValue = () => {
     if (!selectedAutoValue.value) {
         searchError.value = 'Please select a building.';
@@ -39,6 +45,9 @@ const validateSelectedValue = () => {
     searchError.value = '';
     return true;
 };
+
+// Initialize parking data
+const parkingData = ref({});
 
 const nextStep = async () => {
     // Validate selected value from SearchBuilding
@@ -233,7 +242,7 @@ const prevStep = () => {
 
                                             <Accordion value="0">
                                                 <AccordionPanel value="0">
-                                                    <ParkingClause />
+                                                    <ParkingClause :value="parkingData" @update:value="handleParkingDataUpdate" />
                                                 </AccordionPanel>
                                                 <AccordionPanel value="1">
                                                     <AccordionHeader>Pet Policy</AccordionHeader>

@@ -1,29 +1,389 @@
 <script>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 export default {
     name: 'ParkingClause',
-    components: {},
-    setup() {
-        // Parking Clause Start
-        const radioValue = ref(null);
-        const parkingProvided = ref(null);
-        const parkingPayment = ref(null);
-        const parkingFee = ref(null);
-        const parkingFeeFor = ref(null);
-        const parkingFeePaymentMethod = ref(null);
-        const parkingFeeAmount = ref(null);
-        const parkingPaymentDue = ref(null);
-        const feeRefundable = ref(null);
-        const describeArrangement = ref(null);
-        const sliderValueOfSpaces = ref(0);
-        const parkingSpaceDescription = ref('');
-        const unauthorizedVehicles = ref([]);
-        const vehicleRestrictions = ref(null);
-        const specifiedRestrictions = ref([]);
-        const maintenanceResponsibility = ref('');
-        const additionalRules = ref(null);
-        const additionalRulesDetails = ref('');
+    props: {
+        value: {
+            type: Object,
+            default: () => ({}) // Default value can be an empty object
+        }
+    },
+    setup(props, { emit }) {
+        // Reactive variables initialized with default or prop values
+        const radioValue = ref(props.value.radioValue || null);
+        const parkingProvided = ref(props.value.parkingProvided || null);
+        const parkingPayment = ref(props.value.parkingPayment || null);
+        const parkingFee = ref(props.value.parkingFee || null);
+        const parkingFeeFor = ref(props.value.parkingFeeFor || null);
+        const parkingFeePaymentMethod = ref(props.value.parkingFeePaymentMethod || null);
+        const parkingFeeAmount = ref(props.value.parkingFeeAmount || null);
+        const parkingPaymentDue = ref(props.value.parkingPaymentDue || null);
+        const feeRefundable = ref(props.value.feeRefundable || null);
+        const describeArrangement = ref(props.value.describeArrangement || null);
+        const sliderValueOfSpaces = ref(props.value.sliderValueOfSpaces || 0);
+        const parkingSpaceDescription = ref(props.value.parkingSpaceDescription || '');
+        const unauthorizedVehicles = ref(props.value.unauthorizedVehicles || []);
+        const vehicleRestrictions = ref(props.value.vehicleRestrictions || null);
+        const specifiedRestrictions = ref(props.value.specifiedRestrictions || []);
+        const maintenanceResponsibility = ref(props.value.maintenanceResponsibility || '');
+        const additionalRules = ref(props.value.additionalRules || null);
+        const additionalRulesDetails = ref(props.value.additionalRulesDetails || '');
+
+        const resetFromCurrentQuestion = (currentQuestion) => {
+            console.log(`Resetting from question ${currentQuestion}`);
+
+            // Define the mapping of questions to fields to reset
+            const resetMapping = {
+                1: [
+                    'parkingProvided',
+                    'parkingPayment',
+                    'parkingFee',
+                    'parkingFeeFor',
+                    'parkingFeePaymentMethod',
+                    'parkingFeeAmount',
+                    'parkingPaymentDue',
+                    'feeRefundable',
+                    'describeArrangement',
+                    'sliderValueOfSpaces',
+                    'parkingSpaceDescription',
+                    'unauthorizedVehicles',
+                    'vehicleRestrictions',
+                    'specifiedRestrictions',
+                    'maintenanceResponsibility',
+                    'additionalRules',
+                    'additionalRulesDetails'
+                ],
+                2: [
+                    'parkingProvided',
+                    'parkingPayment',
+                    'parkingFee',
+                    'parkingFeeFor',
+                    'parkingFeePaymentMethod',
+                    'parkingFeeAmount',
+                    'parkingPaymentDue',
+                    'feeRefundable',
+                    'describeArrangement',
+                    'sliderValueOfSpaces',
+                    'parkingSpaceDescription',
+                    'unauthorizedVehicles',
+                    'vehicleRestrictions',
+                    'specifiedRestrictions',
+                    'maintenanceResponsibility',
+                    'additionalRules',
+                    'additionalRulesDetails'
+                ],
+                3: [
+                    'parkingFee',
+                    'parkingFeeFor',
+                    'parkingFeePaymentMethod',
+                    'parkingFeeAmount',
+                    'parkingPaymentDue',
+                    'feeRefundable',
+                    'describeArrangement',
+                    'sliderValueOfSpaces',
+                    'parkingSpaceDescription',
+                    'unauthorizedVehicles',
+                    'vehicleRestrictions',
+                    'specifiedRestrictions',
+                    'maintenanceResponsibility',
+                    'additionalRules',
+                    'additionalRulesDetails'
+                ],
+                4: [
+                    'parkingFeeFor',
+                    'parkingFeePaymentMethod',
+                    'parkingFeeAmount',
+                    'parkingPaymentDue',
+                    'feeRefundable',
+                    'describeArrangement',
+                    'sliderValueOfSpaces',
+                    'parkingSpaceDescription',
+                    'unauthorizedVehicles',
+                    'vehicleRestrictions',
+                    'specifiedRestrictions',
+                    'maintenanceResponsibility',
+                    'additionalRules',
+                    'additionalRulesDetails'
+                ],
+                5: [
+                    'parkingFeePaymentMethod',
+                    'parkingFeeAmount',
+                    'parkingPaymentDue',
+                    'feeRefundable',
+                    'describeArrangement',
+                    'sliderValueOfSpaces',
+                    'parkingSpaceDescription',
+                    'unauthorizedVehicles',
+                    'vehicleRestrictions',
+                    'specifiedRestrictions',
+                    'maintenanceResponsibility',
+                    'additionalRules',
+                    'additionalRulesDetails'
+                ],
+                6: [
+                    'parkingFeeAmount',
+                    'parkingPaymentDue',
+                    'feeRefundable',
+                    'describeArrangement',
+                    'sliderValueOfSpaces',
+                    'parkingSpaceDescription',
+                    'unauthorizedVehicles',
+                    'vehicleRestrictions',
+                    'specifiedRestrictions',
+                    'maintenanceResponsibility',
+                    'additionalRules',
+                    'additionalRulesDetails'
+                ],
+                7: [
+                    'parkingPaymentDue',
+                    'feeRefundable',
+                    'describeArrangement',
+                    'sliderValueOfSpaces',
+                    'parkingSpaceDescription',
+                    'unauthorizedVehicles',
+                    'vehicleRestrictions',
+                    'specifiedRestrictions',
+                    'maintenanceResponsibility',
+                    'additionalRules',
+                    'additionalRulesDetails'
+                ],
+                8: [
+                    'feeRefundable',
+                    'describeArrangement',
+                    'sliderValueOfSpaces',
+                    'parkingSpaceDescription',
+                    'unauthorizedVehicles',
+                    'vehicleRestrictions',
+                    'specifiedRestrictions',
+                    'maintenanceResponsibility',
+                    'additionalRules',
+                    'additionalRulesDetails'
+                ],
+                9: ['describeArrangement', 'sliderValueOfSpaces', 'parkingSpaceDescription', 'unauthorizedVehicles', 'vehicleRestrictions', 'specifiedRestrictions', 'maintenanceResponsibility', 'additionalRules', 'additionalRulesDetails'],
+                10: ['sliderValueOfSpaces', 'parkingSpaceDescription', 'unauthorizedVehicles', 'vehicleRestrictions', 'specifiedRestrictions', 'maintenanceResponsibility', 'additionalRules', 'additionalRulesDetails'],
+                11: ['parkingSpaceDescription', 'unauthorizedVehicles', 'vehicleRestrictions', 'specifiedRestrictions', 'maintenanceResponsibility', 'additionalRules', 'additionalRulesDetails'],
+                12: ['unauthorizedVehicles', 'vehicleRestrictions', 'specifiedRestrictions', 'maintenanceResponsibility', 'additionalRules', 'additionalRulesDetails'],
+                13: ['vehicleRestrictions', 'specifiedRestrictions', 'maintenanceResponsibility', 'additionalRules', 'additionalRulesDetails'],
+                14: ['specifiedRestrictions', 'maintenanceResponsibility', 'additionalRules', 'additionalRulesDetails'],
+                15: ['maintenanceResponsibility', 'additionalRules', 'additionalRulesDetails'],
+                16: ['additionalRules', 'additionalRulesDetails'],
+                17: ['additionalRulesDetails']
+            };
+
+            // Method to reset fields from the current question index onwards
+            const fieldsToReset = Object.keys(resetMapping)
+                .filter((key) => Number(key) >= currentQuestion)
+                .flatMap((key) => resetMapping[key]);
+
+            fieldsToReset.forEach((field) => {
+                switch (field) {
+                    case 'sliderValueOfSpaces':
+                        sliderValueOfSpaces.value = 0;
+                        break;
+                    case 'unauthorizedVehicles':
+                    case 'specifiedRestrictions':
+                        eval(field).value = [];
+                        break;
+                    default:
+                        eval(field).value = null;
+                }
+            });
+        };
+
+        // Watchers for each field to trigger the reset function
+        watch(parkingProvided, () => {
+            console.log('parkingProvided changed:', parkingProvided.value);
+            if (parkingProvided.value === 'No') {
+                resetFromCurrentQuestion(1);
+            } else if (parkingProvided.value === 'Yes') {
+                // Handle the case where parkingProvided is 'Yes'
+                resetFromCurrentQuestion(2); // Or any specific logic needed
+            }
+        });
+
+        watch(parkingPayment, () => {
+            console.log('parkingPayment changed:', parkingPayment.value);
+            if (parkingPayment.value === 'Paid Separately') {
+                resetFromCurrentQuestion(2);
+            }
+        });
+
+        watch(parkingFee, () => {
+            console.log('parkingFee changed:', parkingFee.value);
+            if (parkingFee.value === 'Yes' || parkingFee.value === 'No') {
+                resetFromCurrentQuestion(3);
+            }
+        });
+
+        watch(parkingFeeFor, () => {
+            console.log('parkingFeeFor changed:', parkingFeeFor.value);
+            if (parkingFeeFor.value === 'Each Parking Space' || parkingFeeFor.value === 'All of the Parking Spaces') {
+                resetFromCurrentQuestion(4);
+            }
+        });
+
+        watch(parkingFeePaymentMethod, () => {
+            console.log('parkingFeePaymentMethod changed:', parkingFeePaymentMethod.value);
+            if (parkingFeePaymentMethod.value === 'One-Time Payment' || parkingFeePaymentMethod.value === 'Monthly Payment') {
+                resetFromCurrentQuestion(5);
+            }
+        });
+
+        watch(parkingFeeAmount, () => {
+            console.log('parkingFeeAmount changed:', parkingFeeAmount.value);
+            if (parkingFeeAmount.value !== null && parkingFeeAmount.value !== '') {
+                resetFromCurrentQuestion(6);
+            }
+        });
+
+        watch(parkingPaymentDue, () => {
+            console.log('parkingPaymentDue changed:', parkingPaymentDue.value);
+            if (parkingPaymentDue.value === 'At the Start of the Lease' || parkingPaymentDue.value === 'As Part of the Rent') {
+                resetFromCurrentQuestion(7);
+            }
+        });
+
+        watch(feeRefundable, () => {
+            console.log('feeRefundable changed:', feeRefundable.value);
+            if (feeRefundable.value === 'Yes' || feeRefundable.value === 'No') {
+                resetFromCurrentQuestion(8);
+            }
+        });
+
+        watch(sliderValueOfSpaces, () => {
+            console.log('sliderValueOfSpaces changed:', sliderValueOfSpaces.value);
+            if (sliderValueOfSpaces.value !== null && sliderValueOfSpaces.value !== 0) {
+                resetFromCurrentQuestion(9);
+            }
+        });
+
+        watch(describeArrangement, () => {
+            console.log('describeArrangement changed:', describeArrangement.value);
+            if (describeArrangement.value === 'Yes') {
+                resetFromCurrentQuestion(10);
+            }
+        });
+
+        watch(parkingSpaceDescription, () => {
+            console.log('parkingSpaceDescription changed:', parkingSpaceDescription.value);
+            if (describeArrangement.value === 'Yes' && parkingSpaceDescription.value !== '') {
+                resetFromCurrentQuestion(11);
+            }
+        });
+
+        watch(unauthorizedVehicles, () => {
+            console.log('unauthorizedVehicles changed:', unauthorizedVehicles.value);
+            if (unauthorizedVehicles.value.length > 0) {
+                resetFromCurrentQuestion(12);
+            }
+        });
+
+        watch(vehicleRestrictions, () => {
+            console.log('vehicleRestrictions changed:', vehicleRestrictions.value);
+            if (vehicleRestrictions.value === 'Yes') {
+                resetFromCurrentQuestion(13);
+            }
+        });
+
+        watch(specifiedRestrictions, () => {
+            console.log('specifiedRestrictions changed:', specifiedRestrictions.value);
+            if (specifiedRestrictions.value.length > 0) {
+                resetFromCurrentQuestion(14);
+            }
+        });
+
+        watch(maintenanceResponsibility, () => {
+            console.log('maintenanceResponsibility changed:', maintenanceResponsibility.value);
+            if (maintenanceResponsibility.value === 'Tenant(s)' || maintenanceResponsibility.value === 'Landlord') {
+                resetFromCurrentQuestion(15);
+            }
+        });
+
+        watch(additionalRules, () => {
+            console.log('additionalRules changed:', additionalRules.value);
+            if (additionalRules.value === 'Yes') {
+                resetFromCurrentQuestion(16);
+            }
+        });
+
+        watch(additionalRulesDetails, () => {
+            console.log('additionalRulesDetails changed:', additionalRulesDetails.value);
+            if (additionalRulesDetails.value !== '') {
+                resetFromCurrentQuestion(17);
+            }
+        });
+
+        // Emit updates when data changes
+        watch(
+            [
+                radioValue,
+                parkingProvided,
+                parkingPayment,
+                parkingFee,
+                parkingFeeFor,
+                parkingFeePaymentMethod,
+                parkingFeeAmount,
+                parkingPaymentDue,
+                feeRefundable,
+                describeArrangement,
+                sliderValueOfSpaces,
+                parkingSpaceDescription,
+                unauthorizedVehicles,
+                vehicleRestrictions,
+                specifiedRestrictions,
+                maintenanceResponsibility,
+                additionalRules,
+                additionalRulesDetails
+            ],
+            () => {
+                emit('update:value', {
+                    radioValue: radioValue.value,
+                    parkingProvided: parkingProvided.value,
+                    parkingPayment: parkingPayment.value,
+                    parkingFee: parkingFee.value,
+                    parkingFeeFor: parkingFeeFor.value,
+                    parkingFeePaymentMethod: parkingFeePaymentMethod.value,
+                    parkingFeeAmount: parkingFeeAmount.value,
+                    parkingPaymentDue: parkingPaymentDue.value,
+                    feeRefundable: feeRefundable.value,
+                    describeArrangement: describeArrangement.value,
+                    sliderValueOfSpaces: sliderValueOfSpaces.value,
+                    parkingSpaceDescription: parkingSpaceDescription.value,
+                    unauthorizedVehicles: unauthorizedVehicles.value,
+                    vehicleRestrictions: vehicleRestrictions.value,
+                    specifiedRestrictions: specifiedRestrictions.value,
+                    maintenanceResponsibility: maintenanceResponsibility.value,
+                    additionalRules: additionalRules.value,
+                    additionalRulesDetails: additionalRulesDetails.value
+                });
+            },
+            { deep: true }
+        );
+
+        // Method to reset all data
+
+        const resetData = () => {
+            radioValue.value = null;
+            parkingProvided.value = null;
+            parkingPayment.value = null;
+            parkingFee.value = null;
+            parkingFeeFor.value = null;
+            parkingFeePaymentMethod.value = null;
+            parkingFeeAmount.value = null;
+            parkingPaymentDue.value = null;
+            feeRefundable.value = null;
+            describeArrangement.value = null;
+            sliderValueOfSpaces.value = 0;
+            parkingSpaceDescription.value = '';
+            unauthorizedVehicles.value = [];
+            vehicleRestrictions.value = null;
+            specifiedRestrictions.value = [];
+            maintenanceResponsibility.value = '';
+            additionalRules.value = null;
+            additionalRulesDetails.value = '';
+        };
+
         const unauthorizedVehiclesOptions = ref([
             'Commercial Vehicles (e.g., delivery trucks, large vans)',
             'Recreational Vehicles (RVs)',
@@ -45,26 +405,7 @@ export default {
         const restrictionOptions = ref(['Weight Restrictions', 'Size Restrictions', 'Type Restrictions', 'Other Restrictions']);
 
         // Method to reset all data
-        const resetData = () => {
-            radioValue.value = null;
-            parkingProvided.value = null;
-            parkingPayment.value = null;
-            parkingFee.value = null;
-            parkingFeeFor.value = null;
-            parkingFeePaymentMethod.value = null;
-            parkingFeeAmount.value = null;
-            parkingPaymentDue.value = null;
-            feeRefundable.value = null;
-            describeArrangement.value = null;
-            sliderValueOfSpaces.value = 0;
-            parkingSpaceDescription.value = '';
-            unauthorizedVehicles.value = [];
-            vehicleRestrictions.value = null;
-            specifiedRestrictions.value = [];
-            maintenanceResponsibility.value = '';
-            additionalRules.value = null;
-            additionalRulesDetails.value = '';
-        };
+
         return {
             radioValue,
             parkingProvided,
@@ -221,8 +562,9 @@ export default {
 
                     <div v-if="parkingPayment === 'Part of Rent' || feeRefundable === 'Yes' || feeRefundable === 'No'" class="flex flex-col gap-2 mt-3 mb-4">
                         <p class="text-xl font-semibold">How Many Parking Spaces Are Provided?</p>
-                        <InputText v-model.number="sliderValueOfSpaces" />
-                        <Slider v-model="sliderValueOfSpaces" />
+                        <!-- <InputText v-model.number="sliderValueOfSpaces" /> -->
+                        <!-- <Slider v-model="sliderValueOfSpaces" ref="sliderRef" /> -->
+                        <InputNumber showButtons v-model="sliderValueOfSpaces" class="input input-bordered w-full" placeholder="Enter Number of Parking(s)" />
                     </div>
 
                     <!-- Question 10: Would You Like to Describe the Parking Space Arrangement? -->
